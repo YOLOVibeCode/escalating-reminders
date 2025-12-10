@@ -1,0 +1,540 @@
+// ============================================
+// PRISMA SCHEMA - THE SOURCE OF TRUTH
+// ============================================
+// This file defines all database tables, relationships, indexes, and enums.
+// All TypeScript types are generated from this schema.
+// DO NOT duplicate type definitions elsewhere.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER DOMAIN
+// ============================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  profile               UserProfile?
+  subscription          Subscription?
+  trustedContacts       TrustedContact[]
+  reminders             Reminder[]
+  escalationProfiles    EscalationProfile[]
+  agentSubscriptions    UserAgentSubscription[]
+  calendarConnections   CalendarConnection[]
+  notificationLogs      NotificationLog[]
+  apiKeys               ApiKey[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  displayName String   @map("display_name")
+  timezone    String   @default("America/New_York")
+  preferences Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model TrustedContact {
+  id                      String   @id @default(uuid())
+  userId                  String   @map("user_id")
+  name                    String
+  email                   String?
+  phone                   String?
+  relationship            String
+  notificationPreferences Json     @default("{\"email\": true, \"sms\": true}") @map("notification_preferences")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("trusted_contacts")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  name       String
+  keyHash    String    @unique @map("key_hash")
+  keyPrefix  String    @map("key_prefix")
+  lastUsedAt DateTime? @map("last_used_at")
+  expiresAt  DateTime? @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+// ============================================
+// BILLING DOMAIN
+// ============================================
+
+enum SubscriptionTier {
+  FREE
+  PERSONAL
+  PRO
+  FAMILY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String             @unique @map("user_id")
+  tier                 SubscriptionTier   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  squareSubscriptionId String?            @map("square_subscription_id")
+  squareCustomerId     String?            @map("square_customer_id")
+  currentPeriodStart   DateTime           @default(now()) @map("current_period_start")
+  currentPeriodEnd     DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentHistory PaymentHistory[]
+
+  @@index([squareSubscriptionId])
+  @@map("subscriptions")
+}
+
+model PaymentHistory {
+  id              String   @id @default(uuid())
+  subscriptionId  String   @map("subscription_id")
+  amount          Int
+  currency        String   @default("USD")
+  squarePaymentId String?   @map("square_payment_id")
+  status          String
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@map("payment_history")
+}
+
+// ============================================
+// REMINDER DOMAIN
+// ============================================
+
+enum ReminderImportance {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReminderStatus {
+  ACTIVE
+  SNOOZED
+  COMPLETED
+  ARCHIVED
+}
+
+model Reminder {
+  id                  String             @id @default(uuid())
+  userId              String             @map("user_id")
+  title               String
+  description         String?
+  importance          ReminderImportance @default(MEDIUM)
+  status              ReminderStatus     @default(ACTIVE)
+  escalationProfileId String             @map("escalation_profile_id")
+  nextTriggerAt       DateTime?          @map("next_trigger_at")
+  lastTriggeredAt     DateTime?          @map("last_triggered_at")
+  completedAt         DateTime?          @map("completed_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  escalationProfile  EscalationProfile    @relation(fields: [escalationProfileId], references: [id])
+  schedule           ReminderSchedule?
+  snoozes            ReminderSnooze[]
+  escalationState    EscalationState?
+  completionCriteria CompletionCriteria?
+  emailWatchers      EmailWatcher[]
+  notificationLogs   NotificationLog[]
+
+  @@index([userId, status])
+  @@index([status, nextTriggerAt])
+  @@index([userId, nextTriggerAt])
+  @@map("reminders")
+}
+
+enum ScheduleType {
+  ONCE
+  RECURRING
+  INTERVAL
+}
+
+model ReminderSchedule {
+  id              String       @id @default(uuid())
+  reminderId      String       @unique @map("reminder_id")
+  type            ScheduleType
+  timezone        String       @default("America/New_York")
+  triggerAt       DateTime?    @map("trigger_at")
+  cronExpression  String?      @map("cron_expression")
+  intervalMinutes Int?         @map("interval_minutes")
+  excludeDates    DateTime[]   @default([]) @map("exclude_dates")
+  excludeWeekends Boolean      @default(false) @map("exclude_weekends")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@map("reminder_schedules")
+}
+
+model ReminderSnooze {
+  id           String   @id @default(uuid())
+  reminderId   String   @map("reminder_id")
+  snoozedAt    DateTime @default(now()) @map("snoozed_at")
+  snoozeUntil  DateTime @map("snooze_until")
+  reason       String?
+  originalInput String? @map("original_input")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([reminderId])
+  @@map("reminder_snoozes")
+}
+
+model CompletionCriteria {
+  id         String   @id @default(uuid())
+  reminderId String   @unique @map("reminder_id")
+  type       String
+  config     Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@map("completion_criteria")
+}
+
+// ============================================
+// ESCALATION DOMAIN
+// ============================================
+
+model EscalationProfile {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  name        String
+  description String?
+  isPreset    Boolean  @default(false) @map("is_preset")
+  tiers       Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+
+  @@index([userId])
+  @@index([isPreset])
+  @@map("escalation_profiles")
+}
+
+enum EscalationStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  COMPLETED
+  EXPIRED
+}
+
+model EscalationState {
+  id              String           @id @default(uuid())
+  reminderId      String           @unique @map("reminder_id")
+  profileId       String           @map("profile_id")
+  currentTier     Int              @default(1) @map("current_tier")
+  startedAt       DateTime         @default(now()) @map("started_at")
+  lastEscalatedAt DateTime?        @map("last_escalated_at")
+  acknowledgedAt  DateTime?        @map("acknowledged_at")
+  acknowledgedBy  String?          @map("acknowledged_by")
+  status          EscalationStatus @default(ACTIVE)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([status, lastEscalatedAt])
+  @@map("escalation_states")
+}
+
+// ============================================
+// AGENT DOMAIN
+// ============================================
+
+model AgentDefinition {
+  id                  String           @id @default(uuid())
+  type                String           @unique
+  name                String
+  description         String
+  version             String
+  author              String
+  isOfficial          Boolean          @default(false) @map("is_official")
+  isVerified          Boolean          @default(false) @map("is_verified")
+  capabilities        Json
+  configurationSchema Json             @map("configuration_schema")
+  minimumTier         SubscriptionTier @default(FREE) @map("minimum_tier")
+  iconUrl             String?         @map("icon_url")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  subscriptions UserAgentSubscription[]
+
+  @@map("agent_definitions")
+}
+
+model UserAgentSubscription {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  agentDefinitionId String    @map("agent_definition_id")
+  isEnabled         Boolean   @default(true) @map("is_enabled")
+  configuration     Json      @default("{}")
+  webhookSecret     String?   @map("webhook_secret")
+  lastTestedAt      DateTime? @map("last_tested_at")
+  lastTestResult    String?   @map("last_test_result")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentDefinition AgentDefinition @relation(fields: [agentDefinitionId], references: [id])
+
+  @@unique([userId, agentDefinitionId])
+  @@index([userId])
+  @@map("user_agent_subscriptions")
+}
+
+// ============================================
+// WATCHER DOMAIN
+// ============================================
+
+enum EmailProvider {
+  GMAIL
+  OUTLOOK
+  IMAP
+}
+
+model EmailWatcher {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  reminderId  String        @map("reminder_id")
+  provider    EmailProvider
+  isEnabled   Boolean       @default(true) @map("is_enabled")
+  credentials Json
+  rules       Json
+  lastPolledAt DateTime?     @map("last_polled_at")
+  lastMatchAt  DateTime?     @map("last_match_at")
+  errorCount   Int           @default(0) @map("error_count")
+  lastError    String?       @map("last_error")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  reminder Reminder       @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  events   WatcherEvent[]
+
+  @@index([userId])
+  @@index([isEnabled, lastPolledAt])
+  @@map("email_watchers")
+}
+
+model WatcherEvent {
+  id          String   @id @default(uuid())
+  watcherId   String   @map("watcher_id")
+  reminderId  String   @map("reminder_id")
+  matchedAt   DateTime @default(now()) @map("matched_at")
+  matchedRule String   @map("matched_rule")
+  emailSubject String? @map("email_subject")
+  emailFrom    String? @map("email_from")
+  action       String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  watcher EmailWatcher @relation(fields: [watcherId], references: [id], onDelete: Cascade)
+
+  @@index([watcherId])
+  @@index([reminderId])
+  @@map("watcher_events")
+}
+
+// ============================================
+// CALENDAR DOMAIN
+// ============================================
+
+enum CalendarProvider {
+  GOOGLE
+  OUTLOOK
+  APPLE
+}
+
+model CalendarConnection {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  provider      CalendarProvider
+  accountEmail  String           @map("account_email")
+  accessToken   String           @map("access_token")
+  refreshToken  String           @map("refresh_token")
+  tokenExpiresAt DateTime        @map("token_expires_at")
+  lastSyncAt    DateTime?        @map("last_sync_at")
+  syncError     String?          @map("sync_error")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncRules CalendarSyncRule[]
+
+  @@unique([userId, provider, accountEmail])
+  @@index([userId])
+  @@map("calendar_connections")
+}
+
+enum CalendarRuleAction {
+  PAUSE_DURING
+  SNOOZE_UNTIL_END
+  SKIP_DAY
+}
+
+model CalendarSyncRule {
+  id                 String             @id @default(uuid())
+  userId             String             @map("user_id")
+  connectionId      String             @map("connection_id")
+  calendarId        String             @map("calendar_id")
+  labelKey          String             @map("label_key")
+  action            CalendarRuleAction
+  affectedReminderIds String[]          @default([]) @map("affected_reminder_ids")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("calendar_sync_rules")
+}
+
+// ============================================
+// NOTIFICATION DOMAIN
+// ============================================
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+model NotificationLog {
+  id                String             @id @default(uuid())
+  userId            String             @map("user_id")
+  reminderId        String             @map("reminder_id")
+  escalationStateId String?            @map("escalation_state_id")
+  agentType         String             @map("agent_type")
+  tier              Int
+  status            NotificationStatus @default(PENDING)
+  sentAt            DateTime?          @map("sent_at")
+  deliveredAt       DateTime?          @map("delivered_at")
+  failureReason     String?            @map("failure_reason")
+  metadata          Json               @default("{}")
+  createdAt         DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([reminderId, createdAt])
+  @@index([status])
+  @@map("notification_logs")
+}
+
+model PendingNotification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  reminderId  String   @map("reminder_id")
+  agentType   String   @map("agent_type")
+  payload     Json
+  expiresAt   DateTime @map("expires_at")
+  retrievedAt DateTime? @map("retrieved_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, agentType])
+  @@index([expiresAt])
+  @@map("pending_notifications")
+}
+
+// ============================================
+// AUDIT & EVENTS
+// ============================================
+
+model EventLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  eventType String   @map("event_type")
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([eventType])
+  @@index([userId, createdAt])
+  @@map("event_logs")
+}
+
+model AuditTrail {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  resource   String
+  resourceId String   @map("resource_id")
+  changes    Json     @default("{}")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([resource, resourceId])
+  @@map("audit_trails")
+}
+

@@ -1,0 +1,16 @@
+# Railway Configuration - Scheduler Service
+# See: https://docs.railway.app/develop/services
+# IMPORTANT: This service MUST run as a singleton (1 replica only)
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm run start:scheduler"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+numReplicas = 1  # MUST be exactly 1 (singleton for cron jobs)
+healthcheckPath = "/health/ready"
+healthcheckTimeout = 10
+
