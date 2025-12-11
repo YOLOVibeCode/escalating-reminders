@@ -34,6 +34,21 @@ export class AuthRepository {
     }) as Promise<(User & { subscription: { tier: string } | null }) | null>;
   }
 
+  async findByIdWithProfile(id: string): Promise<(User & { profile: any; subscription: any }) | null> {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        profile: true,
+        subscription: {
+          select: {
+            tier: true,
+            status: true,
+          },
+        },
+      },
+    }) as Promise<(User & { profile: any; subscription: any }) | null>;
+  }
+
   async create(data: UserCreateInput): Promise<User> {
     return this.prisma.user.create({
       data,
@@ -45,6 +60,44 @@ export class AuthRepository {
       where: { id },
       data,
     });
+  }
+
+  /**
+   * Update or create user profile.
+   */
+  async updateProfile(
+    userId: string,
+    data: {
+      displayName?: string;
+      timezone?: string;
+      preferences?: Record<string, unknown>;
+    },
+  ): Promise<{ displayName: string; timezone: string; preferences: Record<string, unknown> }> {
+    const existingProfile = await this.prisma.userProfile.findUnique({
+      where: { userId },
+    });
+
+    const updateData: any = {};
+    if (data.displayName !== undefined) updateData.displayName = data.displayName;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone;
+    if (data.preferences !== undefined) updateData.preferences = data.preferences;
+
+    const profile = await this.prisma.userProfile.upsert({
+      where: { userId },
+      update: updateData,
+      create: {
+        userId,
+        displayName: data.displayName || '',
+        timezone: data.timezone || 'America/New_York',
+        preferences: data.preferences || {},
+      },
+    });
+
+    return {
+      displayName: profile.displayName,
+      timezone: profile.timezone,
+      preferences: profile.preferences as Record<string, unknown>,
+    };
   }
 
   // Session management can be implemented via cache or separate table

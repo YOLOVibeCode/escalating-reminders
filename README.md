@@ -40,6 +40,8 @@ npm run dev
 
 ## 📋 Port Assignments
 
+> ⚠️ **STABLE & FINAL**: These port assignments are standardized and will not change.
+
 All services use ports in the **38XX** range:
 
 | Port | Service |
@@ -48,8 +50,10 @@ All services use ports in the **38XX** range:
 | 3801 | NestJS API |
 | 3802 | PostgreSQL |
 | 3803 | Redis |
+| 3810 | MailHog UI |
+| 3811 | MailHog SMTP |
 
-**Full Details**: See [docs/PORT-ASSIGNMENTS.md](docs/PORT-ASSIGNMENTS.md)
+**Full Details**: See [docs/PORT-ASSIGNMENTS.md](docs/PORT-ASSIGNMENTS.md) - **Authoritative source for all port assignments**
 
 ---
 

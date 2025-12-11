@@ -68,12 +68,32 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user information' })
   @ApiResponse({ status: 200, description: 'User information retrieved' })
   async getMe(@Request() req: any): Promise<{ success: true; data: { id: string; email: string } }> {
+    const user = await this.authService.getUserWithProfile(req.user.sub);
     return {
       success: true,
       data: {
-        id: req.user.sub,
-        email: req.user.email,
+        id: user.id,
+        email: user.email,
+        profile: user.profile,
+        subscription: user.subscription,
       },
+    };
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateProfile(
+    @Request() req: { user: { sub: string } },
+    @Body() data: { displayName?: string; timezone?: string; preferences?: Record<string, unknown> },
+  ): Promise<{ success: true; data: { displayName: string; timezone: string; preferences: Record<string, unknown> } }> {
+    const result = await this.authService.updateProfile(req.user.sub, data);
+    return {
+      success: true,
+      data: result,
     };
   }
 }

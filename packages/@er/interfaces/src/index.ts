@@ -17,7 +17,11 @@ export * from './domains/agents';
 export * from './domains/watchers';
 export * from './domains/billing';
 export * from './domains/calendar';
+export * from './domains/admin';
 
 // Infrastructure
 export * from './infrastructure';
+
+// Specifications (for external agent developers)
+export * from './specifications';
 

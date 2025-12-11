@@ -12,7 +12,19 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .next coverage"
+    "clean": "rm -rf .next coverage",
+    "e2e": "playwright test --config=e2e/playwright.config.ts",
+    "e2e:critical": "playwright test --config=e2e/playwright.config.ts --project=critical",
+    "e2e:auth": "playwright test --config=e2e/playwright.config.ts --project=auth",
+    "e2e:dashboard": "playwright test --config=e2e/playwright.config.ts --project=dashboard",
+    "e2e:navigation": "playwright test --config=e2e/playwright.config.ts --project=navigation",
+    "e2e:features": "playwright test --config=e2e/playwright.config.ts --project=features",
+    "e2e:integration": "playwright test --config=e2e/playwright.config.ts --project=integration",
+    "e2e:error": "playwright test --config=e2e/playwright.config.ts --project=error",
+    "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
+    "e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
+    "e2e:report": "playwright show-report e2e-results/html",
+    "e2e:codegen": "playwright codegen http://localhost:3800"
   },
   "dependencies": {
     "@er/types": "workspace:*",
@@ -21,6 +33,7 @@
     "@er/ui-components": "workspace:*",
     "@er/api-client": "workspace:*",
     "@tanstack/react-query": "^5.8.0",
+    "@tanstack/react-query-devtools": "^5.8.0",
     "@tanstack/react-table": "^8.11.0",
     "next": "^14.0.0",
     "react": "^18.2.0",
@@ -28,6 +41,7 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@testing-library/react": "^14.1.0",
     "@testing-library/jest-dom": "^6.1.0",
     "@types/node": "^20.10.0",

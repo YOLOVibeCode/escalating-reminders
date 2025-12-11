@@ -21,6 +21,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ReminderService } from './reminder.service';
+import { ReminderSnoozeService } from './reminder-snooze.service';
+import { ReminderCompletionService } from './reminder-completion.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type {
   Reminder,
@@ -39,7 +41,11 @@ import type {
 @Controller('reminders')
 @UseGuards(JwtAuthGuard)
 export class ReminderController {
-  constructor(private readonly reminderService: ReminderService) {}
+  constructor(
+    private readonly reminderService: ReminderService,
+    private readonly reminderSnoozeService: ReminderSnoozeService,
+    private readonly reminderCompletionService: ReminderCompletionService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new reminder' })
@@ -52,10 +58,10 @@ export class ReminderController {
   @ApiResponse({ status: 403, description: 'Quota exceeded' })
   @HttpCode(HttpStatus.CREATED)
   async create(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Body() createReminderDto: CreateReminderDto,
   ): Promise<Reminder> {
-    return this.reminderService.create(req.user.id, createReminderDto);
+    return this.reminderService.create(req.user.sub, createReminderDto);
   }
 
   @Get()
@@ -70,10 +76,10 @@ export class ReminderController {
     type: Object,
   })
   async findAll(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Query() filters: ReminderFilters,
   ): Promise<PaginatedResult<Reminder>> {
-    return this.reminderService.findAll(req.user.id, filters);
+    return this.reminderService.findAll(req.user.sub, filters);
   }
 
   @Get(':id')
@@ -87,10 +93,10 @@ export class ReminderController {
   @ApiResponse({ status: 404, description: 'Reminder not found' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async findOne(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') id: string,
   ): Promise<Reminder> {
-    return this.reminderService.findById(req.user.id, id);
+    return this.reminderService.findById(req.user.sub, id);
   }
 
   @Patch(':id')
@@ -105,11 +111,11 @@ export class ReminderController {
   @ApiResponse({ status: 404, description: 'Reminder not found' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async update(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') id: string,
     @Body() updateReminderDto: UpdateReminderDto,
   ): Promise<Reminder> {
-    return this.reminderService.update(req.user.id, id, updateReminderDto);
+    return this.reminderService.update(req.user.sub, id, updateReminderDto);
   }
 
   @Delete(':id')
@@ -120,10 +126,64 @@ export class ReminderController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') id: string,
   ): Promise<void> {
-    return this.reminderService.delete(req.user.id, id);
+    return this.reminderService.delete(req.user.sub, id);
+  }
+
+  @Post(':id/snooze')
+  @ApiOperation({ summary: 'Snooze a reminder' })
+  @ApiParam({ name: 'id', description: 'Reminder ID' })
+  @ApiResponse({ status: 200, description: 'Reminder snoozed successfully' })
+  @ApiResponse({ status: 404, description: 'Reminder not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 400, description: 'Invalid duration' })
+  async snooze(
+    @Request() req: { user: { id: string } },
+    @Param('id') id: string,
+    @Body() body: { duration: string },
+  ): Promise<{ success: true; data: { id: string; snoozeUntil: Date } }> {
+    const reminderSnoozeService = this.moduleRef.get('ReminderSnoozeService', { strict: false });
+    const result = await reminderSnoozeService.snooze(req.user.id, id, body.duration);
+    return {
+      success: true,
+      data: {
+        id: result.id,
+        snoozeUntil: result.snoozeUntil,
+      },
+    };
+  }
+
+  @Post(':id/complete')
+  @ApiOperation({ summary: 'Mark reminder as completed' })
+  @ApiParam({ name: 'id', description: 'Reminder ID' })
+  @ApiResponse({ status: 200, description: 'Reminder completed successfully' })
+  @ApiResponse({ status: 404, description: 'Reminder not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async complete(
+    @Request() req: { user: { id: string } },
+    @Param('id') id: string,
+    @Body() body: { source?: string },
+  ): Promise<{ success: true }> {
+    const reminderCompletionService = this.moduleRef.get('ReminderCompletionService', { strict: false });
+    await reminderCompletionService.complete(req.user.id, id, (body.source || 'manual') as any);
+    return { success: true };
+  }
+
+  @Post(':id/acknowledge')
+  @ApiOperation({ summary: 'Acknowledge reminder (stop escalation)' })
+  @ApiParam({ name: 'id', description: 'Reminder ID' })
+  @ApiResponse({ status: 200, description: 'Reminder acknowledged successfully' })
+  @ApiResponse({ status: 404, description: 'Reminder not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async acknowledge(
+    @Request() req: { user: { id: string } },
+    @Param('id') id: string,
+  ): Promise<{ success: true }> {
+    const reminderCompletionService = this.moduleRef.get('ReminderCompletionService', { strict: false });
+    await reminderCompletionService.acknowledge(req.user.id, id);
+    return { success: true };
   }
 }
 

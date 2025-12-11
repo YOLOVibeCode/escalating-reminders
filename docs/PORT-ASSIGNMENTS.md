@@ -1,13 +1,27 @@
 # Port Assignments
 
-> **Version**: 1.0.0  
-> **Last Updated**: December 2024
+> **Version**: 2.0.0 (FINAL)  
+> **Last Updated**: December 2024  
+> **Status**: ✅ **STABLE - These ports are final and will not change**
+
+---
+
+## ⚠️ IMPORTANT: Port Stability
+
+**These port assignments are FINAL and STABLE.** They have been standardized across all code, configuration files, documentation, and tests. **Do not change these ports** without updating ALL references throughout the codebase.
+
+### Port Assignment Policy
+
+- ✅ **All ports are in the 38XX range** - This is intentional and consistent
+- ✅ **Ports are standardized** - Same ports used in development, testing, and documentation
+- ✅ **No future changes planned** - These assignments are permanent
+- ✅ **All references updated** - Code, configs, docs, and tests all use these ports
 
 ---
 
 ## Overview
 
-All services in the Escalating Reminders monorepo use ports in the **38XX** range to avoid conflicts with other services on development machines.
+All services in the Escalating Reminders monorepo use ports in the **38XX** range to avoid conflicts with other services on development machines. This is a **stable, final assignment** that will not change.
 
 ---
 
@@ -25,6 +39,8 @@ All services in the Escalating Reminders monorepo use ports in the **38XX** rang
 | **3807** | Reserved | - | Reserved for future use |
 | **3808** | Reserved | - | Reserved for future use |
 | **3809** | Reserved | - | Reserved for future use |
+| **3810** | MailHog Web UI | Local Docker | Email testing web interface |
+| **3811** | MailHog SMTP | Local Docker | Email testing SMTP server |
 
 ---
 
@@ -58,7 +74,7 @@ npm run dev
 **Usage**:
 ```bash
 cd apps/api
-npm run start:dev
+npm run dev
 # API available at http://localhost:3801/v1
 ```
 
@@ -155,6 +171,54 @@ npm run storybook
 
 ---
 
+### 3810 - MailHog Web UI
+
+**Service**: Email testing web interface  
+**Tool**: MailHog  
+**URL**: `http://localhost:3810`  
+**Configuration**: `infrastructure/docker-compose.yml`
+
+**Usage**:
+```bash
+# Start MailHog via Docker Compose
+cd infrastructure
+docker compose up -d mailhog
+
+# Access web UI at http://localhost:3810
+```
+
+**Features**:
+- View all captured emails
+- Test email templates
+- Inspect email headers and content
+- Download emails as .eml files
+
+---
+
+### 3811 - MailHog SMTP Server
+
+**Service**: Email testing SMTP server  
+**Tool**: MailHog SMTP  
+**Host**: `localhost:3811`  
+**Configuration**: Use in development `.env` files
+
+**Usage**:
+```bash
+# Configure in apps/api/.env
+SMTP_HOST=localhost
+SMTP_PORT=3811
+SMTP_USER=  # Not required for MailHog
+SMTP_PASSWORD=  # Not required for MailHog
+```
+
+**Email Configuration**:
+- **Host**: `localhost`
+- **Port**: `3811`
+- **No authentication required** (development only)
+- All emails sent to this server are captured in MailHog UI
+
+---
+
 ## Environment Variables
 
 ### Frontend (.env)
@@ -239,9 +303,28 @@ Web:      http://localhost:3800
 API:      http://localhost:3801/v1
 Prisma:   http://localhost:3804
 Storybook: http://localhost:3805
+MailHog:  http://localhost:3810
 ```
 
 ---
 
-*This document should be updated whenever port assignments change.*
+## Port Stability Guarantee
+
+**These port assignments are FINAL and will NOT change.** All code, configuration files, documentation, E2E tests, Docker configurations, and environment variable defaults have been updated to use these ports consistently.
+
+### If You Need Different Ports
+
+If you absolutely must use different ports for local development:
+
+1. **Update ALL references** - Search the codebase for port numbers
+2. **Update this document** - Keep PORT-ASSIGNMENTS.md as the source of truth
+3. **Update tests** - E2E tests, scripts, and configurations
+4. **Update Docker** - Dockerfiles and docker-compose.yml
+5. **Update documentation** - All docs that reference ports
+
+**However, we strongly recommend using the standard 38XX ports** to maintain consistency across the team and avoid conflicts.
+
+---
+
+*This document is the authoritative source for all port assignments. These ports are FINAL and STABLE.*
 

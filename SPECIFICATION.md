@@ -450,6 +450,8 @@ Detailed specifications are in `docs/architecture/`:
 | [DATABASE-SCHEMA.md](docs/architecture/DATABASE-SCHEMA.md) | Database tables, indexes, relationships |
 | [EVENT-SYSTEM.md](docs/architecture/EVENT-SYSTEM.md) | Domain events and handlers |
 | [AGENT-SDK.md](docs/architecture/AGENT-SDK.md) | Agent interface, SDK, marketplace |
+| [AGENT-SPECIFICATION.md](docs/specifications/AGENT-SPECIFICATION.md) | **Formal agent protocol spec for third-party developers** |
+| [sample-webhook-agent](examples/sample-webhook-agent/) | **Working sample agent implementation** |
 | [SECURITY.md](docs/architecture/SECURITY.md) | Authentication, authorization, encryption |
 | [INFRASTRUCTURE.md](docs/architecture/INFRASTRUCTURE.md) | Deployment, hosting, CI/CD |
 | [DEVELOPMENT-STANDARDS.md](docs/architecture/DEVELOPMENT-STANDARDS.md) | TDD, ISP, TypeScript standards, naming conventions |

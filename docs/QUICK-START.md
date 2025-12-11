@@ -1,6 +1,8 @@
 # Quick Start Guide
 
-> **Port Assignments**: All services use ports in the **38XX** range. See [PORT-ASSIGNMENTS.md](./PORT-ASSIGNMENTS.md) for details.
+> **Port Assignments**: All services use ports in the **38XX** range.  
+> ⚠️ **STABLE & FINAL**: These ports are standardized and will not change.  
+> See [PORT-ASSIGNMENTS.md](./PORT-ASSIGNMENTS.md) for complete details.
 
 ---
 

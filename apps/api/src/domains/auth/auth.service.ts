@@ -196,4 +196,43 @@ export class AuthService implements IAuthService {
     }
     return 604800; // Default 7 days
   }
+
+  /**
+   * Update user profile.
+   * @throws {NotFoundError} If user doesn't exist
+   */
+  async updateProfile(
+    userId: string,
+    data: { displayName?: string; timezone?: string; preferences?: Record<string, unknown> },
+  ): Promise<{ displayName: string; timezone: string; preferences: Record<string, unknown> }> {
+    // Verify user exists
+    const user = await this.repository.findById(userId);
+    if (!user) {
+      throw new NotFoundError(`User with ID ${userId} not found`);
+    }
+
+    // Update or create profile
+    const profile = await this.repository.updateProfile(userId, {
+      displayName: data.displayName,
+      timezone: data.timezone,
+      preferences: data.preferences,
+    });
+
+    return {
+      displayName: profile.displayName,
+      timezone: profile.timezone,
+      preferences: profile.preferences as Record<string, unknown>,
+    };
+  }
+
+  /**
+   * Get user with profile and subscription.
+   */
+  async getUserWithProfile(userId: string): Promise<User & { profile: any; subscription: any }> {
+    const user = await this.repository.findByIdWithProfile(userId);
+    if (!user) {
+      throw new NotFoundError(`User with ID ${userId} not found`);
+    }
+    return user as any;
+  }
 }

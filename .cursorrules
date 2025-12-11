@@ -204,14 +204,7 @@ Before implementing custom event infrastructure, **ASK THE USER** if they want t
 
 #### **TEST-DRIVEN DEVELOPMENT (REQUIRED)**
 
-**ALL business logic MUST be validated through CLI test harnesses BEFORE implementation.**
-
-- **100% CLI test coverage** for all core interfaces
-- **Mock implementations** validate interface contracts first
-- **CLI tests exercise full business workflows**
-- **Event-driven flows MUST be testable via CLI**
-- **Mock event dispatchers** for testing event flows
-- **No concrete implementation without passing CLI tests**
+**ALL business logic MUST be validated through tests BEFORE implementation.**
 
 #### **STRICT DEVELOPMENT WORKFLOW**
 

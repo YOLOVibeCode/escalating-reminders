@@ -9,11 +9,11 @@ import { ERROR_CODES } from '@er/constants';
  */
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
-  canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
+  override canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
     return super.canActivate(context);
   }
 
-  handleRequest(err: unknown, user: unknown, info: unknown): any {
+  override handleRequest(err: unknown, user: unknown, info: unknown): any {
     if (err || !user) {
       throw new UnauthorizedException({
         code: ERROR_CODES.AUTH_UNAUTHORIZED,

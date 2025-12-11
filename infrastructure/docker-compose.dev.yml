@@ -1,0 +1,28 @@
+# Development Docker Compose override
+# Extends docker-compose.yml with development-specific configurations
+# Uses BuildKit for faster builds
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: escalating_reminders_dev
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+
+  redis:
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  mailhog:
+    environment:
+      MH_STORAGE: maildir
+      MH_MAILDIR_PATH: /maildir
+    volumes:
+      - mailhog_data:/maildir
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  mailhog_data:
+    driver: local

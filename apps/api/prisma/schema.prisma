@@ -36,6 +36,7 @@ model User {
   calendarConnections   CalendarConnection[]
   notificationLogs      NotificationLog[]
   apiKeys               ApiKey[]
+  adminUser             AdminUser?
 
   @@index([email])
   @@map("users")
@@ -89,6 +90,84 @@ model ApiKey {
 
   @@index([keyHash])
   @@map("api_keys")
+}
+
+// ============================================
+// ADMIN DOMAIN
+// ============================================
+
+enum AdminRole {
+  SUPER_ADMIN
+  SUPPORT_ADMIN
+  BILLING_ADMIN
+  READONLY_ADMIN
+}
+
+model AdminUser {
+  id           String    @id @default(uuid())
+  userId       String    @unique @map("user_id")
+  role         AdminRole @default(READONLY_ADMIN)
+  permissions  Json      @default("{}")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adminActions AdminAction[]
+
+  @@index([userId])
+  @@index([role])
+  @@map("admin_users")
+}
+
+model AdminAction {
+  id           String   @id @default(uuid())
+  adminUserId  String   @map("admin_user_id")
+  action       String
+  targetType   String   @map("target_type")
+  targetId     String   @map("target_id")
+  reason       String?
+  changes      Json     @default("{}")
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@map("admin_actions")
+}
+
+model SupportNote {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  adminUserId  String   @map("admin_user_id")
+  content      String
+  isPinned     Boolean  @default(false) @map("is_pinned")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([adminUserId])
+  @@map("support_notes")
+}
+
+model SystemHealthSnapshot {
+  id                String   @id @default(uuid())
+  timestamp         DateTime @default(now())
+  queueStats        Json     @map("queue_stats")
+  workerStats       Json     @map("worker_stats")
+  databaseStats     Json     @map("database_stats")
+  redisStats        Json     @map("redis_stats")
+  notificationStats Json     @map("notification_stats")
+  errorCount        Int      @default(0) @map("error_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@index([timestamp])
+  @@map("system_health_snapshots")
 }
 
 // ============================================

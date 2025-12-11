@@ -1,4 +1,8 @@
-version: '3.8'
+# Docker Compose configuration for Escalating Reminders
+# Uses Docker BuildKit for faster builds
+# All ports follow 38XX series convention
+# All ports follow the 38XX series convention
+# Uses Docker BuildKit for faster builds
 
 services:
   postgres:
@@ -19,6 +23,7 @@ services:
       retries: 5
     networks:
       - er-network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -34,6 +39,22 @@ services:
       retries: 5
     networks:
       - er-network
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: er-mailhog
+    ports:
+      - "3810:8025"  # Web UI
+      - "3811:1025"  # SMTP server
+    networks:
+      - er-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
 volumes:
   postgres_data:

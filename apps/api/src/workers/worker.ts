@@ -3,6 +3,7 @@ import { AppModule } from '../app.module';
 import { QueueService } from '../infrastructure/queue/queue.service';
 import { ReminderProcessor } from './processors/reminder-processor';
 import { NotificationProcessor } from './processors/notification-processor';
+import { EscalationProcessor } from './processors/escalation-processor';
 import { Logger } from '@nestjs/common';
 
 /**
@@ -25,12 +26,18 @@ async function bootstrap() {
     const queueService = app.get(QueueService);
     const reminderProcessor = app.get(ReminderProcessor);
     const notificationProcessor = app.get(NotificationProcessor);
+    const escalationProcessor = app.get(EscalationProcessor);
 
     // Register job processors
 
     // High-priority queue: reminder triggers
     await queueService.process('high-priority', 'reminder.trigger', async (data) => {
       await reminderProcessor.processReminderTrigger(data);
+    });
+
+    // High-priority queue: escalation advancement
+    await queueService.process('high-priority', 'escalation.advance', async (data) => {
+      await escalationProcessor.processEscalationAdvancement(data);
     });
 
     // Default queue: notifications

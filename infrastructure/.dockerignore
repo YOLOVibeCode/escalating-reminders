@@ -1,0 +1,62 @@
+# Docker ignore file
+# Excludes files from Docker build context
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+dist
+build
+out
+coverage
+.nyc_output
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+docs
+*.md
+README.md
+
+# Test files
+**/__tests__
+**/*.spec.ts
+**/*.test.ts
+**/jest.config.*
+**/jest.setup.*
+
+# E2E tests
+**/e2e
+**/e2e-results
+**/test-results
+**/playwright-report
+
+# Misc
+*.log
+.cache
+.turbo
