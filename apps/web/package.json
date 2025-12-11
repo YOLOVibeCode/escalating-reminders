@@ -24,7 +24,12 @@
     "e2e:ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "e2e:headed": "playwright test --config=e2e/playwright.config.ts --headed",
     "e2e:report": "playwright show-report e2e-results/html",
-    "e2e:codegen": "playwright codegen http://localhost:3800"
+    "e2e:codegen": "playwright codegen http://localhost:3800",
+    "e2e:local": "E2E_ENV=local playwright test --config=e2e/playwright.config.ts",
+    "e2e:staging": "E2E_ENV=staging playwright test --config=e2e/playwright.config.ts",
+    "e2e:production": "E2E_ENV=production playwright test --config=e2e/playwright.config.ts",
+    "e2e:smoke": "E2E_ENV=production playwright test --config=e2e/playwright.config.ts --project=critical --project=auth",
+    "e2e:smoke:staging": "E2E_ENV=staging playwright test --config=e2e/playwright.config.ts --project=critical --project=auth"
   },
   "dependencies": {
     "@er/types": "workspace:*",
