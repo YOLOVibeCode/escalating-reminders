@@ -1,4 +1,5 @@
 import type { NotificationLog, PendingNotification } from '@er/types';
+import type { NotificationPayload } from '../agents/IAgentService';
 
 /**
  * Service interface for notification delivery.
@@ -39,7 +40,12 @@ export interface IPendingNotificationService {
   /**
    * Create a pending notification for pull-mode agents.
    */
-  create(userId: string, reminderId: string, agentType: string, payload: NotificationPayload): Promise<PendingNotification>;
+  create(
+    userId: string,
+    reminderId: string,
+    agentType: string,
+    payload: NotificationPayload,
+  ): Promise<PendingNotification>;
 
   /**
    * Get pending notifications for a user and agent type.
@@ -55,15 +61,5 @@ export interface IPendingNotificationService {
    * Clean up expired pending notifications.
    */
   cleanupExpired(): Promise<number>;
-}
-
-export interface NotificationPayload {
-  title: string;
-  message: string;
-  escalationTier: number;
-  importance: string;
-  actions: string[];
-  actionsUrl?: string;
-  metadata?: Record<string, unknown>;
 }
 

@@ -2,7 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "preserve",
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -28,15 +32,38 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@er/types": ["../../packages/@er/types/src"],
-      "@er/constants": ["../../packages/@er/constants/src"],
-      "@er/utils": ["../../packages/@er/utils/src"],
-      "@er/ui-components": ["../../packages/@er/ui-components/src"],
-      "@er/api-client": ["../../packages/@er/api-client/src"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "@er/types": [
+        "../../packages/@er/types/src"
+      ],
+      "@er/constants": [
+        "../../packages/@er/constants/src"
+      ],
+      "@er/utils": [
+        "../../packages/@er/utils/src"
+      ],
+      "@er/ui-components": [
+        "../../packages/@er/ui-components/src"
+      ],
+      "@er/api-client": [
+        "../../packages/@er/api-client/src"
+      ]
+    },
+    "noEmit": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next", "dist", "coverage"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "coverage",
+    "jest.config.ts"
+  ]
 }
-

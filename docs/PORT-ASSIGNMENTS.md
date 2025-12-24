@@ -41,6 +41,7 @@ All services in the Escalating Reminders monorepo use ports in the **38XX** rang
 | **3809** | Reserved | - | Reserved for future use |
 | **3810** | MailHog Web UI | Local Docker | Email testing web interface |
 | **3811** | MailHog SMTP | Local Docker | Email testing SMTP server |
+| **3812** | Webhook Receiver | E2E Testing | Local webhook sink for Playwright integration tests |
 
 ---
 
@@ -216,6 +217,21 @@ SMTP_PASSWORD=  # Not required for MailHog
 - **Port**: `3811`
 - **No authentication required** (development only)
 - All emails sent to this server are captured in MailHog UI
+
+---
+
+### 3812 - Webhook Receiver (E2E)
+
+**Service**: Local webhook sink for integration tests  
+**Purpose**: Receives outbound webhook agent deliveries during Playwright integration tests  
+**URL**: `http://localhost:3812`  
+**Default Webhook URL**: `http://localhost:3812/webhook`  
+**Configuration**:
+- Receiver: `apps/web/e2e/webhook-receiver/server.js`
+- Tests: `apps/web/e2e/specs/05-integration.spec.ts`
+
+**Notes**:
+- This is **test-only** and runs automatically during Playwright global setup.
 
 ---
 

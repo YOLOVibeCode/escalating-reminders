@@ -28,6 +28,13 @@
     }
   },
   "include": ["src/**/*", "prisma/**/*"],
-  "exclude": ["node_modules", "dist", "test"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "src/**/__tests__/**",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ]
 }
 

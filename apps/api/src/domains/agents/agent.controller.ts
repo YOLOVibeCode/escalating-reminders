@@ -24,8 +24,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type {
   AgentDefinition,
   UserAgentSubscription,
-  TestResult,
 } from '@er/types';
+import type { TestResult } from '@er/interfaces';
 
 /**
  * Agent controller.
@@ -49,9 +49,9 @@ export class AgentController {
     type: Object,
   })
   async findAll(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
   ): Promise<AgentDefinition[]> {
-    return this.agentDefinitionService.findAll(req.user.id);
+    return this.agentDefinitionService.findAll(req.user.sub);
   }
 
   @Get('subscriptions')
@@ -62,9 +62,9 @@ export class AgentController {
     type: Object,
   })
   async findSubscriptions(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
   ): Promise<UserAgentSubscription[]> {
-    return this.subscriptionService.findByUser(req.user.id);
+    return this.subscriptionService.findByUser(req.user.sub);
   }
 
   @Post(':id/subscribe')
@@ -78,12 +78,12 @@ export class AgentController {
   @ApiResponse({ status: 400, description: 'Invalid request body' })
   @HttpCode(HttpStatus.CREATED)
   async subscribe(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') agentId: string,
     @Body() body: { configuration: Record<string, unknown> },
   ): Promise<UserAgentSubscription> {
     return this.subscriptionService.subscribe(
-      req.user.id,
+      req.user.sub,
       agentId,
       body.configuration,
     );
@@ -99,12 +99,12 @@ export class AgentController {
   })
   @ApiResponse({ status: 404, description: 'Subscription not found' })
   async updateSubscription(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') subscriptionId: string,
     @Body() body: { configuration: Record<string, unknown> },
   ): Promise<UserAgentSubscription> {
     return this.subscriptionService.update(
-      req.user.id,
+      req.user.sub,
       subscriptionId,
       body.configuration,
     );
@@ -117,10 +117,10 @@ export class AgentController {
   @ApiResponse({ status: 404, description: 'Subscription not found' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async unsubscribe(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') subscriptionId: string,
   ): Promise<void> {
-    return this.subscriptionService.unsubscribe(req.user.id, subscriptionId);
+    return this.subscriptionService.unsubscribe(req.user.sub, subscriptionId);
   }
 
   @Post('subscriptions/:id/test')
@@ -132,10 +132,10 @@ export class AgentController {
     type: Object,
   })
   async test(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') subscriptionId: string,
   ): Promise<TestResult> {
-    return this.subscriptionService.test(req.user.id, subscriptionId);
+    return this.subscriptionService.test(req.user.sub, subscriptionId);
   }
 }
 

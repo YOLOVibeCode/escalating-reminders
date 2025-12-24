@@ -11,6 +11,7 @@ import type {
   UpdateReminderDto,
   ReminderFilters,
   PaginatedResult,
+  ReminderStatus,
 } from '@er/types';
 
 /**
@@ -54,18 +55,20 @@ export class ReminderService implements IReminderService {
     }
 
     // Set default nextTriggerAt from schedule
-    const nextTriggerAt = dto.schedule.triggerAt || undefined;
+    const nextTriggerAt = dto.schedule.triggerAt;
 
     // Create reminder
-    const reminder = await this.repository.create({
+    const createData: any = {
       userId,
       title: dto.title,
-      description: dto.description,
       importance: dto.importance,
-      status: 'ACTIVE',
+      status: 'ACTIVE' as ReminderStatus,
       escalationProfileId: dto.escalationProfileId,
-      nextTriggerAt,
-    });
+    };
+    if (dto.description !== undefined) createData.description = dto.description;
+    if (nextTriggerAt) createData.nextTriggerAt = nextTriggerAt;
+
+    const reminder = await this.repository.create(createData);
 
     return reminder;
   }

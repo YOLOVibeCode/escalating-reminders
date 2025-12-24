@@ -1,8 +1,25 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Get, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Get,
+  Request,
+  Patch,
+  Query,
+  Param,
+  Res,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
+import { OAuthProviderService } from './oauth-provider.service';
+import { OAuthAuthService } from './oauth-auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CreateUserDto, LoginDto, TokenPair, User } from '@er/types';
+import type { OAuthProvider } from '@er/interfaces';
 
 /**
  * Auth controller.
@@ -11,7 +28,11 @@ import { CreateUserDto, LoginDto, TokenPair, User } from '@er/types';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly oauthProviderService: OAuthProviderService,
+    private readonly oauthAuthService: OAuthAuthService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -67,7 +88,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user information' })
   @ApiResponse({ status: 200, description: 'User information retrieved' })
-  async getMe(@Request() req: any): Promise<{ success: true; data: { id: string; email: string } }> {
+  async getMe(@Request() req: any): Promise<{ success: true; data: any }> {
     const user = await this.authService.getUserWithProfile(req.user.sub);
     return {
       success: true,
@@ -95,6 +116,74 @@ export class AuthController {
       success: true,
       data: result,
     };
+  }
+
+  @Get('oauth/:provider/authorize')
+  @ApiOperation({ summary: 'Get OAuth authorization URL' })
+  @ApiResponse({ status: 200, description: 'Authorization URL generated' })
+  @ApiResponse({ status: 400, description: 'Invalid provider' })
+  async getOAuthAuthorizationUrl(
+    @Param('provider') provider: string,
+    @Query('redirectUri') redirectUri: string,
+  ): Promise<{ success: true; data: { url: string; state: string } }> {
+    if (!redirectUri) {
+      throw new Error('redirectUri query parameter is required');
+    }
+
+    const result = await this.oauthProviderService.getAuthorizationUrl(
+      provider.toUpperCase() as OAuthProvider,
+      redirectUri,
+    );
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  @Get('oauth/:provider/callback')
+  @ApiOperation({ summary: 'Handle OAuth callback' })
+  @ApiResponse({ status: 200, description: 'OAuth authentication successful' })
+  @ApiResponse({ status: 401, description: 'OAuth authentication failed' })
+  async handleOAuthCallback(
+    @Param('provider') provider: string,
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('redirectUri') redirectUri: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!code) {
+      res.redirect(`${redirectUri}?error=missing_code`);
+      return;
+    }
+
+    try {
+      // Exchange code for user info
+      const userInfo = await this.oauthProviderService.exchangeCodeForUserInfo(
+        provider.toUpperCase() as OAuthProvider,
+        code,
+        redirectUri,
+      );
+
+      // Authenticate or register user
+      const result = await this.oauthAuthService.authenticateWithOAuth(
+        provider.toUpperCase() as OAuthProvider,
+        userInfo,
+      );
+
+      // Redirect to frontend with tokens
+      const params = new URLSearchParams({
+        accessToken: result.tokens.accessToken,
+        refreshToken: result.tokens.refreshToken,
+        isNewUser: result.isNewUser.toString(),
+      });
+
+      res.redirect(`${redirectUri}?${params.toString()}`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'OAuth authentication failed';
+      res.redirect(`${redirectUri}?error=${encodeURIComponent(errorMessage)}`);
+    }
   }
 }
 

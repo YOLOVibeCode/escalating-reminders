@@ -30,7 +30,7 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
   const { data: subscriptions } = useAgentSubscriptions();
 
   const agent = agents?.find((a) => a.type === params.id);
-  const existingSubscription = subscriptions?.find((s) => s.agentType === params.id);
+  const existingSubscription = (subscriptions as any[])?.find((s: any) => s.agentDefinition?.type === params.id);
 
   const [configuration, setConfiguration] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +42,9 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
   useEffect(() => {
     if (existingSubscription) {
       setConfiguration(existingSubscription.configuration as Record<string, string>);
-    } else if (agent?.configurationSchema?.fields) {
+    } else if ((agent as any)?.configurationSchema?.fields) {
       const initialConfig: Record<string, string> = {};
-      agent.configurationSchema.fields.forEach((field: any) => {
+      (agent as any).configurationSchema.fields.forEach((field: any) => {
         if (field.defaultValue) {
           initialConfig[field.key] = field.defaultValue;
         }
@@ -91,7 +91,7 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
     }
   };
 
-  const fields = agent.configurationSchema?.fields || [];
+  const fields = ((agent as any).configurationSchema?.fields as any[]) || [];
 
   return (
     <div className="container mx-auto max-w-2xl space-y-6 p-6">
@@ -105,7 +105,7 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
         <p className="mt-1 text-sm text-gray-600">{agent.description}</p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} data-testid="agent-config-form">
         <Card>
           <CardHeader>
             <CardTitle>Configuration</CardTitle>
@@ -117,7 +117,7 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4" data-testid="agent-config-error" role="alert">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
@@ -134,7 +134,9 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
                   {field.type === 'text' || field.type === 'email' || field.type === 'url' ? (
                     <Input
                       id={field.key}
+                      name={field.key}
                       type={field.type}
+                      data-testid={`agent-config-${field.key}-input`}
                       required={field.required}
                       value={configuration[field.key] || ''}
                       onChange={(e) =>
@@ -146,6 +148,8 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
                   ) : field.type === 'textarea' ? (
                     <textarea
                       id={field.key}
+                      name={field.key}
+                      data-testid={`agent-config-${field.key}-textarea`}
                       required={field.required}
                       value={configuration[field.key] || ''}
                       onChange={(e) =>
@@ -158,7 +162,9 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
                   ) : (
                     <Input
                       id={field.key}
+                      name={field.key}
                       type="text"
+                      data-testid={`agent-config-${field.key}-input`}
                       required={field.required}
                       value={configuration[field.key] || ''}
                       onChange={(e) =>
@@ -189,7 +195,9 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
                 </label>
                 <Input
                   id="url"
+                  name="url"
                   type="url"
+                  data-testid="agent-config-url-input"
                   required
                   value={configuration.url || ''}
                   onChange={(e) =>
@@ -212,10 +220,11 @@ export default function AgentConfigurePage({ params }: AgentConfigurePageProps) 
             variant="outline"
             onClick={() => router.back()}
             disabled={subscribeMutation.isPending || updateMutation.isPending}
+            data-testid="cancel-button"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={subscribeMutation.isPending || updateMutation.isPending}>
+          <Button type="submit" disabled={subscribeMutation.isPending || updateMutation.isPending} data-testid="submit-button">
             {subscribeMutation.isPending || updateMutation.isPending
               ? 'Saving...'
               : existingSubscription

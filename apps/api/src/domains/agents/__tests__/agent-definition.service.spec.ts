@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AgentDefinitionService } from '../agent-definition.service';
 import { AgentDefinitionRepository } from '../agent-definition.repository';
+import { AuthRepository } from '../../auth/auth.repository';
+import { NotFoundError } from '../../../common/exceptions/not-found.exception';
 import type { AgentDefinition } from '@er/types';
 
 describe('AgentDefinitionService', () => {
@@ -12,6 +14,10 @@ describe('AgentDefinitionService', () => {
     findByType: jest.fn(),
   };
 
+  const mockAuthRepository = {
+    findByIdWithSubscription: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -19,6 +25,10 @@ describe('AgentDefinitionService', () => {
         {
           provide: AgentDefinitionRepository,
           useValue: mockRepository,
+        },
+        {
+          provide: AuthRepository,
+          useValue: mockAuthRepository,
         },
       ],
     }).compile();
@@ -113,12 +123,16 @@ describe('AgentDefinitionService', () => {
       ];
 
       mockRepository.findAll.mockResolvedValue(mockAgents);
+      mockAuthRepository.findByIdWithSubscription.mockResolvedValue({
+        id: 'user_free',
+        subscription: { tier: 'FREE' },
+      });
 
       // User with FREE tier should only see FREE agents
       const result = await service.findAll('user_free');
 
       expect(result.length).toBe(1);
-      expect(result[0].type).toBe('email');
+      expect(result[0]?.type).toBe('email');
     });
   });
 
@@ -151,9 +165,7 @@ describe('AgentDefinitionService', () => {
     it('should throw NotFoundError when agent does not exist', async () => {
       mockRepository.findByType.mockResolvedValue(null);
 
-      await expect(service.findByType('nonexistent')).rejects.toThrow(
-        'NotFoundError',
-      );
+      await expect(service.findByType('nonexistent')).rejects.toThrow(NotFoundError);
     });
   });
 });

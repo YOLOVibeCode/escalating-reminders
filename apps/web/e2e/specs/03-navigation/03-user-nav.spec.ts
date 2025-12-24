@@ -23,35 +23,35 @@ test.describe('Layer 3: User Navigation', () => {
 
   test('03-02: Dashboard link @navigation', async ({ page }) => {
     await page.goto('/reminders');
-    const dashboardLink = page.locator('a[href*="/dashboard"], [data-testid="nav-dashboard"]').first();
+    const dashboardLink = page.locator('[data-testid="nav-dashboard-link"]').first();
     await dashboardLink.click();
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
   test('03-03: Reminders link @navigation', async ({ page }) => {
     await page.goto('/dashboard');
-    const remindersLink = page.locator('a[href*="/reminders"], [data-testid="nav-reminders"]').first();
+    const remindersLink = page.locator('[data-testid="nav-reminders-link"]').first();
     await remindersLink.click();
     await expect(page).toHaveURL(/\/reminders/);
   });
 
   test('03-04: Agents link @navigation', async ({ page }) => {
     await page.goto('/dashboard');
-    const agentsLink = page.locator('a[href*="/agents"], [data-testid="nav-agents"]').first();
+    const agentsLink = page.locator('[data-testid="nav-agents-link"]').first();
     await agentsLink.click();
     await expect(page).toHaveURL(/\/agents/);
   });
 
   test('03-05: Notifications link @navigation', async ({ page }) => {
     await page.goto('/dashboard');
-    const notificationsLink = page.locator('a[href*="/notifications"], [data-testid="nav-notifications"]').first();
+    const notificationsLink = page.locator('[data-testid="nav-notifications-link"]').first();
     await notificationsLink.click();
     await expect(page).toHaveURL(/\/notifications/);
   });
 
   test('03-06: Settings link @navigation', async ({ page }) => {
     await page.goto('/dashboard');
-    const settingsLink = page.locator('a[href*="/settings"], [data-testid="nav-settings"]').first();
+    const settingsLink = page.locator('[data-testid="nav-settings-link"]').first();
     await settingsLink.click();
     await expect(page).toHaveURL(/\/settings/);
   });
@@ -83,7 +83,7 @@ test.describe('Layer 3: User Navigation', () => {
 
   test('03-10: Active state highlight @navigation', async ({ page }) => {
     await page.goto('/dashboard');
-    const activeLink = page.locator('[data-testid="nav-dashboard"][aria-current], a[href="/dashboard"][aria-current]').first();
+    const activeLink = page.locator('[data-testid="nav-dashboard-link"]').first();
     const isActive = await activeLink.isVisible().catch(() => false);
     // Active state might be styled differently - just verify navigation works
     expect(page.url()).toMatch(/\/dashboard/);
@@ -138,7 +138,7 @@ test.describe('Layer 3: User Navigation', () => {
 
   test('03-16: New reminder shortcut @navigation', async ({ page }) => {
     await page.goto('/dashboard');
-    const newReminderBtn = page.locator('[data-testid="new-reminder"], button:has-text("New Reminder"), a[href*="/reminders/new"]').first();
+    const newReminderBtn = page.locator('[data-testid="create-reminder-button"]').first();
     if (await newReminderBtn.isVisible().catch(() => false)) {
       await newReminderBtn.click();
       await expect(page).toHaveURL(/\/reminders\/new/);

@@ -3,6 +3,8 @@ import { EscalationProfileService } from '../escalation-profile.service';
 import { EscalationProfileRepository } from '../escalation-profile.repository';
 import { AuthRepository } from '../../auth/auth.repository';
 import { SUBSCRIPTION_TIERS } from '@er/constants';
+import { NotFoundError } from '../../../common/exceptions/not-found.exception';
+import { ForbiddenError } from '../../../common/exceptions/forbidden.exception';
 import type {
   EscalationProfile,
   CreateEscalationProfileDto,
@@ -109,7 +111,7 @@ describe('EscalationProfileService', () => {
       mockRepository.findById.mockResolvedValue(null);
 
       await expect(service.findById('nonexistent')).rejects.toThrow(
-        'NotFoundError',
+        NotFoundError,
       );
     });
   });
@@ -220,7 +222,7 @@ describe('EscalationProfileService', () => {
 
       await expect(
         service.update('user_123', 'nonexistent', updateDto),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ForbiddenError when user does not own profile', async () => {
@@ -238,7 +240,7 @@ describe('EscalationProfileService', () => {
 
       await expect(
         service.update('user_123', 'profile_123', updateDto),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -267,7 +269,7 @@ describe('EscalationProfileService', () => {
 
       await expect(
         service.delete('user_123', 'nonexistent'),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ForbiddenError when user does not own profile', async () => {
@@ -285,7 +287,7 @@ describe('EscalationProfileService', () => {
 
       await expect(
         service.delete('user_123', 'profile_123'),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
 
     it('should not allow deleting preset profiles', async () => {
@@ -303,7 +305,7 @@ describe('EscalationProfileService', () => {
 
       await expect(
         service.delete('user_123', 'esc_preset_gentle'),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 });

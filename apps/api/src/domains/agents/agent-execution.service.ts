@@ -1,12 +1,14 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { UserAgentSubscriptionRepository } from './user-agent-subscription.repository';
-import type { IAgentExecutionService, IAgentExecutor } from '@er/interfaces';
 import type {
+  IAgentExecutionService,
+  IAgentExecutor,
   NotificationPayload,
   AgentCommand,
   SendResult,
   CommandResult,
-} from '@er/types';
+} from '@er/interfaces';
+import type { UserAgentSubscription } from '@er/types';
 
 /**
  * Agent execution service.
@@ -158,7 +160,7 @@ export class AgentExecutionService implements IAgentExecutionService {
     subscription: UserAgentSubscription,
   ): Promise<{ success: boolean; message: string; deliveryTime?: number }> {
     const executor = this.getExecutor(
-      (subscription.agentDefinition as any)?.type || 'unknown',
+      (subscription as any).agentDefinition?.type || 'unknown',
     );
 
     if (!executor) {

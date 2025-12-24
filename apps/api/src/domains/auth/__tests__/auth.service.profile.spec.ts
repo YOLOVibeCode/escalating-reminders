@@ -5,6 +5,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { AuthService } from '../auth.service';
 import { AuthRepository } from '../auth.repository';
@@ -50,7 +51,7 @@ describe('AuthService - Profile Update', () => {
           },
         },
         {
-          provide: 'JwtService',
+          provide: JwtService,
           useValue: {
             sign: jest.fn(),
             verify: jest.fn(),
@@ -161,5 +162,6 @@ describe('AuthService - Profile Update', () => {
     });
   });
 });
+
 
 

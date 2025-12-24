@@ -24,7 +24,7 @@ export class AgentDefinitionService implements IAgentDefinitionService {
     if (userId) {
       const user = await this.authRepository.findByIdWithSubscription(userId);
       if (user && user.subscription) {
-        const userTier = user.subscription.tier;
+        const userTier = user.subscription.tier as SubscriptionTier;
         return this.filterByTier(allAgents, userTier);
       }
     }

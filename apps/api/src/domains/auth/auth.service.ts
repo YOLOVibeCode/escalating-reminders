@@ -6,6 +6,7 @@ import { AuthRepository } from './auth.repository';
 import { ERROR_CODES } from '@er/constants';
 import type { IAuthService } from '@er/interfaces';
 import type { CreateUserDto, LoginDto, TokenPair, AccessTokenPayload, RefreshTokenPayload, User } from '@er/types';
+import { NotFoundError } from '../../common/exceptions';
 
 /**
  * Auth service.
@@ -77,7 +78,14 @@ export class AuthService implements IAuthService {
       });
     }
 
-    // Verify password
+    // Verify password (OAuth users don't have passwords)
+    if (!user.passwordHash) {
+      throw new UnauthorizedException({
+        code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        message: 'This account uses OAuth login. Please sign in with Google.',
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException({
@@ -105,8 +113,9 @@ export class AuthService implements IAuthService {
   async refreshToken(refreshToken: string): Promise<TokenPair> {
     try {
       // Verify refresh token
+      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || 'dev_refresh_secret';
       const payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: refreshSecret,
       });
 
       // Get user with subscription
@@ -146,24 +155,23 @@ export class AuthService implements IAuthService {
       sub: userId,
       email,
       tier: tier as any,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + this.getAccessTokenExpiry(),
     };
 
     const refreshTokenPayload: RefreshTokenPayload = {
       sub: userId,
       sessionId: '', // Session management can be added later
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + this.getRefreshTokenExpiry(),
     };
 
-    const accessToken = this.jwtService.sign(accessTokenPayload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
+    const accessSecret = this.configService.get<string>('JWT_SECRET') || 'dev_jwt_secret';
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || 'dev_refresh_secret';
+
+    const accessToken = this.jwtService.sign(accessTokenPayload as any, {
+      secret: accessSecret,
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
     });
 
-    const refreshToken = this.jwtService.sign(refreshTokenPayload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+    const refreshToken = this.jwtService.sign(refreshTokenPayload as any, {
+      secret: refreshSecret,
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
     });
 
@@ -212,11 +220,12 @@ export class AuthService implements IAuthService {
     }
 
     // Update or create profile
-    const profile = await this.repository.updateProfile(userId, {
-      displayName: data.displayName,
-      timezone: data.timezone,
-      preferences: data.preferences,
-    });
+    const update: any = {};
+    if (data.displayName !== undefined) update.displayName = data.displayName;
+    if (data.timezone !== undefined) update.timezone = data.timezone;
+    if (data.preferences !== undefined) update.preferences = data.preferences;
+
+    const profile = await this.repository.updateProfile(userId, update);
 
     return {
       displayName: profile.displayName,

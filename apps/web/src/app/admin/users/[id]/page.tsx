@@ -14,12 +14,6 @@ import {
   CardContent,
   Badge,
   Button,
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -57,7 +51,8 @@ export default function AdminUserDetailsPage({
     return <div className="py-8 text-center">User not found</div>;
   }
 
-  const { user, subscription, reminders, supportNotes, totalSpent } = userDetails;
+  const { user, subscription, agentSubscriptions, supportNotes, remindersCount, activeRemindersCount } =
+    userDetails as any;
 
   const handleSuspend = async () => {
     const reason = prompt('Enter reason for suspension:');
@@ -126,23 +121,20 @@ export default function AdminUserDetailsPage({
           <Button variant="outline" onClick={() => router.back()}>
             Back to Users
           </Button>
-          {user.status === 'ACTIVE' ? (
-            <Button
-              variant="outline"
-              onClick={handleSuspend}
-              disabled={suspendMutation.isPending}
-            >
-              Suspend User
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={handleUnsuspend}
-              disabled={unsuspendMutation.isPending}
-            >
-              Unsuspend User
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={handleSuspend}
+            disabled={suspendMutation.isPending}
+          >
+            Suspend User
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleUnsuspend}
+            disabled={unsuspendMutation.isPending}
+          >
+            Unsuspend User
+          </Button>
           <Button
             variant="outline"
             onClick={handleDelete}
@@ -158,9 +150,7 @@ export default function AdminUserDetailsPage({
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="reminders">
-            Reminders ({reminders?.length || 0})
-          </TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="notes">
             Support Notes ({supportNotes?.length || 0})
           </TabsTrigger>
@@ -185,34 +175,16 @@ export default function AdminUserDetailsPage({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Status</p>
-                  <Badge
-                    variant={
-                      user.status === 'ACTIVE'
-                        ? 'success'
-                        : user.status === 'SUSPENDED'
-                        ? 'danger'
-                        : 'secondary'
-                    }
-                  >
-                    {user.status}
-                  </Badge>
+                  <Badge variant="secondary">N/A</Badge>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Tier</p>
-                  <Badge>{user.tier}</Badge>
+                  <p className="text-sm font-medium text-gray-500">Subscription Tier</p>
+                  <Badge>{subscription?.tier || 'FREE'}</Badge>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Created</p>
                   <p className="text-sm">
                     {new Date(user.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Last Login</p>
-                  <p className="text-sm">
-                    {user.lastLoginAt
-                      ? new Date(user.lastLoginAt).toLocaleString()
-                      : 'Never'}
                   </p>
                 </div>
               </CardContent>
@@ -228,14 +200,12 @@ export default function AdminUserDetailsPage({
                   <div className="space-y-3">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Plan</p>
-                      <p className="text-sm">{subscription.plan}</p>
+                      <p className="text-sm">{subscription.tier}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Status</p>
                       <Badge
-                        variant={
-                          subscription.status === 'ACTIVE' ? 'success' : 'secondary'
-                        }
+                        variant={subscription.status === 'ACTIVE' ? 'success' : 'secondary'}
                       >
                         {subscription.status}
                       </Badge>
@@ -246,13 +216,9 @@ export default function AdminUserDetailsPage({
                       </p>
                       <p className="text-sm">
                         {new Date(subscription.currentPeriodStart).toLocaleDateString()} -{' '}
-                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Total Spent</p>
-                      <p className="text-lg font-bold">
-                        ${totalSpent.toFixed(2)}
+                        {subscription.currentPeriodEnd
+                          ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+                          : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -264,43 +230,44 @@ export default function AdminUserDetailsPage({
           </div>
         </TabsContent>
 
-        {/* Reminders Tab */}
-        <TabsContent value="reminders">
+        {/* Activity Tab */}
+        <TabsContent value="activity">
           <Card>
             <CardHeader>
-              <CardTitle>Reminders</CardTitle>
+              <CardTitle>Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              {reminders?.length ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Created</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reminders.map((reminder: any) => (
-                      <TableRow key={reminder.id}>
-                        <TableCell>{reminder.title}</TableCell>
-                        <TableCell>
-                          <Badge>{reminder.status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(reminder.dueDate).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(reminder.createdAt).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Reminders (total)</span>
+                  <Badge variant="secondary">{remindersCount}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Reminders (active)</span>
+                  <Badge variant="secondary">{activeRemindersCount}</Badge>
+                </div>
+                <div className="pt-4">
+                  <p className="text-sm font-medium">Agent Subscriptions</p>
+                  <div className="mt-2 space-y-2">
+                    {agentSubscriptions?.map((sub: any) => (
+                      <div key={sub.id} className="rounded-md border p-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{sub.agentDefinition?.name || sub.agentDefinitionId}</span>
+                          <Badge variant={sub.isEnabled ? 'success' : 'secondary'}>
+                            {sub.isEnabled ? 'Enabled' : 'Disabled'}
+                          </Badge>
+                        </div>
+                        {sub.agentDefinition?.type && (
+                          <p className="mt-1 text-xs text-gray-500">Type: {sub.agentDefinition.type}</p>
+                        )}
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-sm text-gray-500">No reminders</p>
-              )}
+                    {!agentSubscriptions?.length && (
+                      <p className="text-sm text-gray-500">No agent subscriptions</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -350,3 +317,4 @@ export default function AdminUserDetailsPage({
     </div>
   );
 }
+

@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { AdminService } from '../admin.service';
 import { AdminRepository } from '../admin.repository';
 import { AdminAuthorizationService } from '../admin-authorization.service';
 import { EventBusService } from '../../../infrastructure/events/event-bus.service';
+import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import type { AdminUser, SupportNote } from '@er/types';
 import { AdminRole } from '@er/types';
 import { AdminPermission } from '@er/interfaces';
@@ -38,6 +40,16 @@ describe('AdminService', () => {
     publish: jest.fn(),
   };
 
+  const mockPrisma = {
+    subscription: {
+      update: jest.fn(),
+    },
+  };
+
+  const mockConfigService = {
+    get: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,6 +66,14 @@ describe('AdminService', () => {
           provide: 'IEventBus',
           useValue: mockEventBus,
         },
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
       ],
     }).compile();
 
@@ -63,6 +83,15 @@ describe('AdminService', () => {
     eventBus = module.get<EventBusService>('IEventBus');
 
     jest.clearAllMocks();
+
+    // Ensure mocks don't leak implementations across tests
+    mockAuthorization.verifyAdminAccess.mockReset();
+    mockAuthorization.checkPermission.mockReset();
+    mockAuthorization.requirePermission.mockReset();
+    mockAuthorization.requirePermission.mockImplementation(() => undefined);
+
+    mockPrisma.subscription.update.mockResolvedValue({});
+    mockConfigService.get.mockReturnValue(undefined);
   });
 
   describe('promoteToAdmin', () => {

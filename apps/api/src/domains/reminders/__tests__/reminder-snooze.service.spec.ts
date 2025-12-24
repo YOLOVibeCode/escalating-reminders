@@ -12,6 +12,14 @@ import { NotFoundError, ForbiddenError, ValidationError } from '../../../common/
 import { parseNaturalLanguageDateTime } from '@er/utils';
 import type { Reminder, ReminderSnooze } from '@er/types';
 
+jest.mock('@er/utils', () => {
+  const actual = jest.requireActual('@er/utils');
+  return {
+    ...actual,
+    parseNaturalLanguageDateTime: jest.fn(),
+  };
+});
+
 describe('ReminderSnoozeService', () => {
   let service: ReminderSnoozeService;
   let reminderRepository: ReminderRepository;
@@ -88,8 +96,7 @@ describe('ReminderSnoozeService', () => {
         nextTriggerAt: snoozeUntil,
       });
 
-      // Mock parseNaturalLanguageDateTime
-      jest.spyOn(require('@er/utils'), 'parseNaturalLanguageDateTime').mockReturnValue({
+      (parseNaturalLanguageDateTime as unknown as jest.Mock).mockReturnValue({
         date: snoozeUntil,
         isValid: true,
         originalText: 'until next Friday',
@@ -127,7 +134,7 @@ describe('ReminderSnoozeService', () => {
     it('should throw ValidationError if duration cannot be parsed', async () => {
       mockPrismaService.reminder.findUnique.mockResolvedValue(mockReminder);
 
-      jest.spyOn(require('@er/utils'), 'parseNaturalLanguageDateTime').mockReturnValue({
+      (parseNaturalLanguageDateTime as unknown as jest.Mock).mockReturnValue({
         date: new Date(),
         isValid: false,
         originalText: 'invalid duration',

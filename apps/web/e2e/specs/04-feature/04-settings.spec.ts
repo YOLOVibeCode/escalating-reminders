@@ -13,11 +13,11 @@ test.describe('Layer 4: Settings CRUD', () => {
   test('04-14: Update profile @feature', async ({ page }) => {
     await page.goto('/settings/profile');
     
-    const displayNameInput = page.locator('[data-testid="display-name-input"], input[name="displayName"]').first();
+    const displayNameInput = page.locator('[data-testid="display-name-input"]').first();
     if (await displayNameInput.isVisible().catch(() => false)) {
       await displayNameInput.fill('Updated Name');
       
-      const saveButton = page.locator('[data-testid="save-button"], button[type="submit"]').first();
+      const saveButton = page.locator('[data-testid="save-button"]').first();
       await saveButton.click();
       
       await page.waitForTimeout(2000);

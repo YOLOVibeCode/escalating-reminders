@@ -54,9 +54,9 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} data-testid="register-form">
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div className="rounded-md bg-red-50 p-4" data-testid="register-error" role="alert">
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
@@ -70,6 +70,7 @@ export default function RegisterPage() {
                 id="displayName"
                 name="displayName"
                 type="text"
+                data-testid="display-name-input"
                 autoComplete="name"
                 required
                 value={displayName}
@@ -87,6 +88,7 @@ export default function RegisterPage() {
                 id="email"
                 name="email"
                 type="email"
+                data-testid="email-input"
                 autoComplete="email"
                 required
                 value={email}
@@ -104,6 +106,7 @@ export default function RegisterPage() {
                 id="password"
                 name="password"
                 type="password"
+                data-testid="password-input"
                 autoComplete="new-password"
                 required
                 value={password}
@@ -120,6 +123,7 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full"
+              data-testid="register-button"
               disabled={registerMutation.isPending}
             >
               {registerMutation.isPending ? 'Creating account...' : 'Create account'}
@@ -127,7 +131,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="text-center text-sm">
-            <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <a href="/login" className="font-medium text-blue-600 hover:text-blue-500" data-testid="login-link">
               Already have an account? Sign in
             </a>
           </div>

@@ -28,7 +28,7 @@ describe('AgentController', () => {
   };
 
   const mockUser = {
-    id: 'user_123',
+    sub: 'user_123',
     email: 'test@example.com',
   };
 

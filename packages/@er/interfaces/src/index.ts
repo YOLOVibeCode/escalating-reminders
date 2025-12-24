@@ -23,5 +23,5 @@ export * from './domains/admin';
 export * from './infrastructure';
 
 // Specifications (for external agent developers)
-export * from './specifications';
+// NOTE: Not re-exported from the root barrel to avoid type name collisions.
 

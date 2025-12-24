@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { IEventBus, DomainEvent, EventHandler } from '@er/interfaces';
+import type { IEventBus, DomainEvent, IEventHandler } from '@er/interfaces';
 
 /**
  * In-memory event bus service.
@@ -9,9 +9,9 @@ import type { IEventBus, DomainEvent, EventHandler } from '@er/interfaces';
 @Injectable()
 export class EventBusService implements IEventBus {
   private readonly logger = new Logger(EventBusService.name);
-  private handlers: Map<string, Set<EventHandler>> = new Map();
+  private handlers: Map<string, Set<IEventHandler<DomainEvent>>> = new Map();
 
-  async publish(event: DomainEvent): Promise<void> {
+  async publish<T extends DomainEvent>(event: T): Promise<void> {
     const eventType = event.type;
     const handlers = this.handlers.get(eventType);
 
@@ -25,7 +25,7 @@ export class EventBusService implements IEventBus {
     // Execute all handlers in parallel
     const promises = Array.from(handlers).map(async (handler) => {
       try {
-        await handler(event);
+        await handler.handle(event);
       } catch (error) {
         this.logger.error(`Error in event handler for ${eventType}:`, error);
         // Don't throw - continue processing other handlers
@@ -35,7 +35,12 @@ export class EventBusService implements IEventBus {
     await Promise.allSettled(promises);
   }
 
-  async subscribe(eventType: string, handler: EventHandler): Promise<void> {
+  async publishAll(events: DomainEvent[]): Promise<void> {
+    await Promise.allSettled(events.map((e) => this.publish(e)));
+  }
+
+  // Non-interface convenience method
+  async subscribe(eventType: string, handler: IEventHandler<DomainEvent>): Promise<void> {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
     }
@@ -44,7 +49,8 @@ export class EventBusService implements IEventBus {
     this.logger.debug(`Subscribed handler to event: ${eventType}`);
   }
 
-  async unsubscribe(eventType: string, handler: EventHandler): Promise<void> {
+  // Non-interface convenience method
+  async unsubscribe(eventType: string, handler: IEventHandler<DomainEvent>): Promise<void> {
     const handlers = this.handlers.get(eventType);
     if (handlers) {
       handlers.delete(handler);

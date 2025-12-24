@@ -1,23 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { NotificationService } from '../notification.service';
 import { NotificationRepository } from '../notification.repository';
 import { ReminderRepository } from '../../reminders/reminder.repository';
-import { EscalationStateService } from '../../escalation/escalation-state.service';
 import { EscalationProfileRepository } from '../../escalation/escalation-profile.repository';
 import { AgentExecutionService } from '../../agents/agent-execution.service';
-import { UserAgentSubscriptionRepository } from '../../agents/user-agent-subscription.repository';
+import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import type {
-  NotificationLog,
   Reminder,
   EscalationProfile,
-  EscalationState,
 } from '@er/types';
 
 describe('NotificationService', () => {
   let service: NotificationService;
   let notificationRepository: NotificationRepository;
   let reminderRepository: ReminderRepository;
-  let escalationStateService: EscalationStateService;
   let escalationProfileRepository: EscalationProfileRepository;
   let agentExecutionService: AgentExecutionService;
 
@@ -32,17 +29,28 @@ describe('NotificationService', () => {
     findById: jest.fn(),
   };
 
-  const mockEscalationStateService = {
-    findDueForAdvancement: jest.fn(),
-    advance: jest.fn(),
-  };
-
   const mockEscalationProfileRepository = {
     findById: jest.fn(),
   };
 
   const mockAgentExecutionService = {
     execute: jest.fn(),
+  };
+
+  const mockPrisma = {
+    subscription: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    deliveryWindowUsage: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+  };
+
+  const mockConfigService = {
+    get: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -58,16 +66,20 @@ describe('NotificationService', () => {
           useValue: mockReminderRepository,
         },
         {
-          provide: EscalationStateService,
-          useValue: mockEscalationStateService,
-        },
-        {
           provide: EscalationProfileRepository,
           useValue: mockEscalationProfileRepository,
         },
         {
           provide: AgentExecutionService,
           useValue: mockAgentExecutionService,
+        },
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
         },
       ],
     }).compile();
@@ -77,9 +89,6 @@ describe('NotificationService', () => {
       NotificationRepository,
     );
     reminderRepository = module.get<ReminderRepository>(ReminderRepository);
-    escalationStateService = module.get<EscalationStateService>(
-      EscalationStateService,
-    );
     escalationProfileRepository = module.get<EscalationProfileRepository>(
       EscalationProfileRepository,
     );
@@ -88,6 +97,13 @@ describe('NotificationService', () => {
     );
 
     jest.clearAllMocks();
+
+    // Default delivery policy: ACTIVE (no blocking, no throttling)
+    mockPrisma.subscription.findUnique.mockResolvedValue({
+      deliveryState: 'ACTIVE',
+      usageSuspendedUntil: null,
+    });
+    mockConfigService.get.mockReturnValue(undefined);
   });
 
   describe('sendTierNotifications', () => {
@@ -96,7 +112,7 @@ describe('NotificationService', () => {
       userId: 'user_123',
       title: 'Test Reminder',
       description: 'Test',
-      importance: 'NORMAL',
+      importance: 'MEDIUM',
       status: 'ACTIVE',
       escalationProfileId: 'profile_123',
       nextTriggerAt: new Date(),
@@ -137,16 +153,15 @@ describe('NotificationService', () => {
         id: 'notif_123',
         userId: 'user_123',
         reminderId: 'reminder_123',
+        escalationStateId: null,
         agentType: 'webhook',
-        escalationTier: 1,
+        tier: 1,
         status: 'DELIVERED',
-        payload: {},
-        messageId: 'msg_123',
+        sentAt: new Date(),
         deliveredAt: new Date(),
-        error: null,
-        retryCount: 0,
+        failureReason: null,
+        metadata: {},
         createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
       const result = await service.sendTierNotifications(
@@ -210,7 +225,7 @@ describe('NotificationService', () => {
         title: 'Test',
         message: 'Test message',
         escalationTier: 1,
-        importance: 'NORMAL',
+        importance: 'MEDIUM',
         actions: [],
       };
 
@@ -223,23 +238,22 @@ describe('NotificationService', () => {
         id: 'notif_123',
         userId: 'user_123',
         reminderId: 'reminder_123',
+        escalationStateId: null,
         agentType: 'webhook',
-        escalationTier: 1,
+        tier: 1,
         status: 'DELIVERED',
-        payload: {},
-        messageId: 'msg_123',
+        sentAt: new Date(),
         deliveredAt: new Date(),
-        error: null,
-        retryCount: 0,
+        failureReason: null,
+        metadata: {},
         createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
       const result = await service.sendNotification(
         'user_123',
         'reminder_123',
         'webhook',
-        payload,
+        payload as any,
       );
 
       expect(result).toBeDefined();

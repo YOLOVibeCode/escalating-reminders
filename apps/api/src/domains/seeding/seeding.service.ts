@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import * as bcrypt from 'bcrypt';
+import type { ReminderImportance, ReminderStatus, ScheduleType, SubscriptionTier } from '@er/types';
 
 /**
  * Seeding service for E2E tests and development.
@@ -19,11 +20,16 @@ export class SeedingService {
     escalationProfiles: any[];
     agentSubscriptions: any[];
   }> {
-    const results = {
-      users: { user: null, admin: null },
-      reminders: [],
-      escalationProfiles: [],
-      agentSubscriptions: [],
+    const results: {
+      users: { user: any; admin: any };
+      reminders: any[];
+      escalationProfiles: any[];
+      agentSubscriptions: any[];
+    } = {
+      users: { user: null as any, admin: null as any },
+      reminders: [] as any[],
+      escalationProfiles: [] as any[],
+      agentSubscriptions: [] as any[],
     };
 
     // Seed users
@@ -76,8 +82,8 @@ export class SeedingService {
           },
           subscription: {
             create: {
-              tier: 'PERSONAL',
-              status: 'ACTIVE',
+              tier: 'PERSONAL' as SubscriptionTier,
+              status: 'ACTIVE' as any,
               currentPeriodStart: new Date(),
               currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
             },
@@ -108,8 +114,8 @@ export class SeedingService {
           },
           subscription: {
             create: {
-              tier: 'PRO',
-              status: 'ACTIVE',
+              tier: 'PRO' as SubscriptionTier,
+              status: 'ACTIVE' as any,
               currentPeriodStart: new Date(),
               currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             },
@@ -217,6 +223,9 @@ export class SeedingService {
    * Seed test reminders
    */
   async seedReminders(userId: string, escalationProfileId?: string): Promise<any[]> {
+    if (!escalationProfileId) {
+      throw new Error('seedReminders requires an escalationProfileId');
+    }
     const reminders = [
       {
         title: 'Daily Standup',
@@ -271,13 +280,13 @@ export class SeedingService {
             userId,
             title: reminderData.title,
             description: reminderData.description,
-            importance: reminderData.importance,
-            status: reminderData.status,
-            escalationProfileId: escalationProfileId || null,
+            importance: reminderData.importance as ReminderImportance,
+            status: reminderData.status as ReminderStatus,
+            escalationProfileId,
             nextTriggerAt: nextTrigger,
             schedule: {
               create: {
-                type: reminderData.schedule.type,
+                type: reminderData.schedule.type as ScheduleType,
                 cronExpression: reminderData.schedule.cronExpression,
                 timezone: reminderData.schedule.timezone,
               },
@@ -339,7 +348,7 @@ export class SeedingService {
         configurationSchema: {
           fields: [
             {
-              key: 'webhookUrl',
+              key: 'url',
               type: 'url',
               label: 'Webhook URL',
               required: true,
@@ -353,8 +362,24 @@ export class SeedingService {
     for (const agentDef of agentDefinitions) {
       await this.prisma.agentDefinition.upsert({
         where: { type: agentDef.type },
-        update: {},
-        create: agentDef,
+        update: {
+          // Keep definitions in sync across runs.
+          name: agentDef.name,
+          description: agentDef.description,
+          version: agentDef.version,
+          author: agentDef.author,
+          isOfficial: agentDef.isOfficial,
+          isVerified: agentDef.isVerified,
+          minimumTier: agentDef.minimumTier as any,
+          capabilities: agentDef.capabilities as any,
+          configurationSchema: agentDef.configurationSchema as any,
+        },
+        create: {
+          ...agentDef,
+          minimumTier: agentDef.minimumTier as any,
+          capabilities: agentDef.capabilities as any,
+          configurationSchema: agentDef.configurationSchema as any,
+        },
       });
     }
 
@@ -382,7 +407,7 @@ export class SeedingService {
         userId,
         agentDefinitionId: webhookAgent.id,
         configuration: {
-          webhookUrl: 'https://example.com/webhook',
+          url: 'https://example.com/webhook',
         },
         isEnabled: true,
       },
@@ -404,7 +429,25 @@ export class SeedingService {
         });
         createdSubscriptions.push(subscription);
       } else {
-        createdSubscriptions.push(existing);
+        // Keep existing subscriptions compatible with current schema keys.
+        const existingConfig = (existing.configuration || {}) as any;
+        const desiredConfig = subData.configuration as any;
+        const mergedConfig =
+          existingConfig.url || existingConfig.webhookUrl
+            ? {
+                ...existingConfig,
+                ...(existingConfig.url ? {} : existingConfig.webhookUrl ? { url: existingConfig.webhookUrl } : {}),
+              }
+            : { ...existingConfig, ...desiredConfig };
+
+        const updated = await this.prisma.userAgentSubscription.update({
+          where: { id: existing.id },
+          data: {
+            configuration: mergedConfig as any,
+            isEnabled: true,
+          },
+        });
+        createdSubscriptions.push(updated);
       }
     }
 

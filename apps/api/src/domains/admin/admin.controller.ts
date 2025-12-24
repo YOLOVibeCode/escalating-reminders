@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Body,
@@ -23,6 +24,7 @@ import type {
   Subscription,
   PaymentHistory,
   SystemHealthSnapshot,
+  SupportNote,
 } from '@er/types';
 import type {
   DashboardOverview,
@@ -84,10 +86,9 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: UserStats }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getUserStats(filters);
     return {
       success: true,
@@ -108,12 +109,11 @@ export class AdminController {
     @Query('search') search?: string,
     @Query('tier') tier?: string,
   ): Promise<{ success: true; data: PaginatedResult<User> }> {
-    const filters: UserListFilters = {
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-      search,
-      tier,
-    };
+    const filters: any = {};
+    if (page) filters.page = parseInt(page, 10);
+    if (pageSize) filters.pageSize = parseInt(pageSize, 10);
+    if (search) filters.search = search;
+    if (tier) filters.tier = tier;
     const result = await this.dashboardService.getUserList(filters);
     return {
       success: true,
@@ -144,7 +144,7 @@ export class AdminController {
     @Body() body: { reason: string },
     @Request() req: any,
   ): Promise<{ success: true }> {
-    await this.adminService.suspendUser(userId, body.reason, req.user.id);
+    await this.adminService.suspendUser(userId, body.reason, req.user.sub);
     return { success: true };
   }
 
@@ -154,7 +154,34 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'User unsuspended successfully' })
   @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async unsuspendUser(@Param('id') userId: string, @Request() req: any): Promise<{ success: true }> {
-    await this.adminService.unsuspendUser(userId, req.user.id);
+    await this.adminService.unsuspendUser(userId, req.user.sub);
+    return { success: true };
+  }
+
+  @Post('users/:id/disable-delivery')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Disable outbound delivery for a user (no messages sent)' })
+  @ApiResponse({ status: 200, description: 'User delivery disabled successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async disableUserDelivery(
+    @Param('id') userId: string,
+    @Body() body: { reason: string },
+    @Request() req: any,
+  ): Promise<{ success: true }> {
+    await this.adminService.disableUserDelivery(userId, body.reason, req.user.sub);
+    return { success: true };
+  }
+
+  @Post('users/:id/enable-delivery')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enable outbound delivery for a user' })
+  @ApiResponse({ status: 200, description: 'User delivery enabled successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  async enableUserDelivery(
+    @Param('id') userId: string,
+    @Request() req: any,
+  ): Promise<{ success: true }> {
+    await this.adminService.enableUserDelivery(userId, req.user.sub);
     return { success: true };
   }
 
@@ -168,7 +195,48 @@ export class AdminController {
     @Body() body: { reason: string },
     @Request() req: any,
   ): Promise<{ success: true }> {
-    await this.adminService.deleteUser(userId, body.reason, req.user.id);
+    await this.adminService.deleteUser(userId, body.reason, req.user.sub);
+    return { success: true };
+  }
+
+  // ============================================
+  // Support Notes
+  // ============================================
+
+  @Post('support-notes')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Create a support note for a user' })
+  @ApiResponse({ status: 200, description: 'Support note created' })
+  async createSupportNote(
+    @Body() body: { userId: string; content: string },
+    @Request() req: any,
+  ): Promise<{ success: true; data: SupportNote }> {
+    const note = await this.adminService.addSupportNote(body.userId, body.content, req.user.sub);
+    return { success: true, data: note };
+  }
+
+  @Patch('support-notes/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a support note' })
+  @ApiResponse({ status: 200, description: 'Support note updated' })
+  async updateSupportNote(
+    @Param('id') noteId: string,
+    @Body() body: { content: string },
+    @Request() req: any,
+  ): Promise<{ success: true; data: SupportNote }> {
+    const note = await this.adminService.updateSupportNote(noteId, body.content, req.user.sub);
+    return { success: true, data: note };
+  }
+
+  @Delete('support-notes/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a support note' })
+  @ApiResponse({ status: 200, description: 'Support note deleted' })
+  async deleteSupportNote(
+    @Param('id') noteId: string,
+    @Request() req: any,
+  ): Promise<{ success: true }> {
+    await this.adminService.deleteSupportNote(noteId, req.user.sub);
     return { success: true };
   }
 
@@ -183,10 +251,9 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: BillingStats }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getBillingStats(filters);
     return {
       success: true,
@@ -207,12 +274,11 @@ export class AdminController {
     @Query('status') status?: string,
     @Query('tier') tier?: string,
   ): Promise<{ success: true; data: PaginatedResult<Subscription> }> {
-    const filters: SubscriptionListFilters = {
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-      status,
-      tier,
-    };
+    const filters: any = {};
+    if (page) filters.page = parseInt(page, 10);
+    if (pageSize) filters.pageSize = parseInt(pageSize, 10);
+    if (status) filters.status = status;
+    if (tier) filters.tier = tier;
     const result = await this.dashboardService.getSubscriptionList(filters);
     return {
       success: true,
@@ -233,12 +299,11 @@ export class AdminController {
     @Query('subscriptionId') subscriptionId?: string,
     @Query('status') status?: string,
   ): Promise<{ success: true; data: PaginatedResult<PaymentHistory> }> {
-    const filters: PaymentHistoryFilters = {
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-      subscriptionId,
-      status,
-    };
+    const filters: any = {};
+    if (page) filters.page = parseInt(page, 10);
+    if (pageSize) filters.pageSize = parseInt(pageSize, 10);
+    if (subscriptionId) filters.subscriptionId = subscriptionId;
+    if (status) filters.status = status;
     const result = await this.dashboardService.getPaymentHistory(filters);
     return {
       success: true,
@@ -253,10 +318,9 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: RevenueMetrics }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getRevenueMetrics(filters);
     return {
       success: true,
@@ -290,11 +354,10 @@ export class AdminController {
     @Query('endDate') endDate?: string,
     @Query('limit') limit?: string,
   ): Promise<{ success: true; data: SystemHealthSnapshot[] }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (limit) filters.limit = parseInt(limit, 10);
     const result = await this.dashboardService.getSystemHealthHistory(filters);
     return {
       success: true,
@@ -335,10 +398,9 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: ReminderStats }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getReminderStats(filters);
     return {
       success: true,
@@ -354,11 +416,10 @@ export class AdminController {
     @Query('endDate') endDate?: string,
     @Query('agentType') agentType?: string,
   ): Promise<{ success: true; data: NotificationStats }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-      agentType,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+    if (agentType) filters.agentType = agentType;
     const result = await this.dashboardService.getNotificationStats(filters);
     return {
       success: true,
@@ -373,10 +434,9 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: EscalationStats }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getEscalationStats(filters);
     return {
       success: true,
@@ -395,10 +455,9 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: AgentStats }> {
-    const filters = {
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getAgentStats(filters);
     return {
       success: true,
@@ -417,11 +476,10 @@ export class AdminController {
     @Query('pageSize') pageSize?: string,
     @Query('agentType') agentType?: string,
   ): Promise<{ success: true; data: PaginatedResult<any> }> {
-    const filters = {
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-      agentType,
-    };
+    const filters: any = {};
+    if (page) filters.page = parseInt(page, 10);
+    if (pageSize) filters.pageSize = parseInt(pageSize, 10);
+    if (agentType) filters.agentType = agentType;
     const result = await this.dashboardService.getAgentSubscriptions(filters);
     return {
       success: true,
@@ -451,16 +509,15 @@ export class AdminController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ): Promise<{ success: true; data: PaginatedResult<any> }> {
-    const filters: AuditLogFilters = {
-      page: page ? parseInt(page, 10) : undefined,
-      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
-      adminUserId,
-      action,
-      targetType,
-      targetId,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    };
+    const filters: any = {};
+    if (page) filters.page = parseInt(page, 10);
+    if (pageSize) filters.pageSize = parseInt(pageSize, 10);
+    if (adminUserId) filters.adminUserId = adminUserId;
+    if (action) filters.action = action;
+    if (targetType) filters.targetType = targetType;
+    if (targetId) filters.targetId = targetId;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
     const result = await this.dashboardService.getAuditLog(filters);
     return {
       success: true,

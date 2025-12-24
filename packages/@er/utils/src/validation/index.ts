@@ -1,3 +1,3 @@
-export * from './reminder-validation';
-export * from './user-validation';
+export { validateCreateReminder, validateUpdateReminder } from './reminder-validation';
+export { validateCreateUser } from './user-validation';
 

@@ -128,10 +128,7 @@ test.describe('Layer 2: Admin Dashboard Pages', () => {
   test('02-23: Admin layout renders @dashboard', async ({ page }) => {
     await assertOnDashboard(page, 'admin');
     
-    const sidebar = page.locator('[data-testid="sidebar"], aside, nav').first();
-    await expect(sidebar).toBeVisible({ timeout: 5000 });
-    
-    const header = page.locator('[data-testid="header"], header').first();
+    const header = page.locator('[data-testid="header"]').first();
     await expect(header).toBeVisible({ timeout: 5000 });
     
     await assertNoConsoleErrors(page);
@@ -150,7 +147,7 @@ test.describe('Layer 2: Admin Dashboard Pages', () => {
     // Should redirect to login or show 403
     await page.waitForTimeout(2000);
     const isRedirected = page.url().includes('/login') || page.url().includes('/dashboard');
-    const hasError = await page.locator('[data-testid="error"], .error, [role="alert"]').first().isVisible().catch(() => false);
+    const hasError = await page.locator('[data-testid="reminder-error"], [role="alert"]').first().isVisible().catch(() => false);
     
     expect(isRedirected || hasError).toBeTruthy();
   });

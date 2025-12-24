@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import type { NotificationLog } from '@er/types';
+import type { NotificationLog, NotificationStatus } from '@er/types';
 
 /**
  * Notification repository.
@@ -19,7 +19,7 @@ export class NotificationRepository {
     reminderId: string;
     agentType: string;
     tier: number;
-    status: string;
+    status: NotificationStatus;
     metadata?: unknown;
     sentAt?: Date;
     deliveredAt?: Date;
@@ -32,10 +32,10 @@ export class NotificationRepository {
         agentType: data.agentType,
         tier: data.tier,
         status: data.status,
-        metadata: data.metadata || {},
-        sentAt: data.sentAt,
-        deliveredAt: data.deliveredAt,
-        failureReason: data.failureReason,
+        metadata: (data.metadata || {}) as any,
+        ...(data.sentAt ? { sentAt: data.sentAt } : {}),
+        ...(data.deliveredAt ? { deliveredAt: data.deliveredAt } : {}),
+        ...(data.failureReason ? { failureReason: data.failureReason } : {}),
       },
     });
   }
@@ -46,7 +46,7 @@ export class NotificationRepository {
   async update(
     id: string,
     data: {
-      status?: string;
+      status?: NotificationStatus;
       sentAt?: Date;
       deliveredAt?: Date;
       failureReason?: string;
@@ -55,7 +55,13 @@ export class NotificationRepository {
   ): Promise<NotificationLog> {
     return this.prisma.notificationLog.update({
       where: { id },
-      data,
+      data: {
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.sentAt !== undefined ? { sentAt: data.sentAt } : {}),
+        ...(data.deliveredAt !== undefined ? { deliveredAt: data.deliveredAt } : {}),
+        ...(data.failureReason !== undefined ? { failureReason: data.failureReason } : {}),
+        ...(data.metadata !== undefined ? { metadata: data.metadata as any } : {}),
+      },
     });
   }
 

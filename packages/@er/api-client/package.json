@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@er/types": "workspace:*",
+    "@er/types": "file:../types",
     "@tanstack/react-query": "^5.8.0"
   },
   "peerDependencies": {

@@ -1,0 +1,1 @@
+{"version":3,"file":"natural-language-parser.d.ts","sourceRoot":"","sources":["natural-language-parser.ts"],"names":[],"mappings":"AAMA,MAAM,WAAW,cAAc;IAC7B,IAAI,EAAE,IAAI,CAAC;IACX,OAAO,EAAE,OAAO,CAAC;IACjB,YAAY,EAAE,MAAM,CAAC;IACrB,UAAU,EAAE,MAAM,GAAG,QAAQ,GAAG,KAAK,CAAC;CACvC;AAyGD,wBAAgB,4BAA4B,CAC1C,IAAI,EAAE,MAAM,EACZ,aAAa,GAAE,IAAiB,GAC/B,cAAc,CA+NhB"}

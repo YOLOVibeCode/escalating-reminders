@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * Assert that there are no critical console errors

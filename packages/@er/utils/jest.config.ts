@@ -1,7 +1,8 @@
-import type { Config } from 'jest';
-import baseConfig from '../../../jest.config.base';
+export {};
 
-const config: Config = {
+const baseConfig = require('../../../jest.config.base');
+
+module.exports = {
   ...baseConfig,
   displayName: '@er/utils',
   rootDir: '.',
@@ -11,6 +12,4 @@ const config: Config = {
     '^@er/constants$': '<rootDir>/../../@er/constants/src',
   },
 };
-
-export default config;
 

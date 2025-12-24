@@ -7,7 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { NotificationQueryService } from '../notification-query.service';
 import { NotificationRepository } from '../notification.repository';
-import { NotFoundError } from '../../../common/exceptions';
+import { NotFoundError, ForbiddenError } from '../../../common/exceptions';
 import type { NotificationLog, PaginatedResult } from '@er/types';
 
 describe('NotificationQueryService', () => {
@@ -147,5 +147,6 @@ describe('NotificationQueryService', () => {
     });
   });
 });
+
 
 

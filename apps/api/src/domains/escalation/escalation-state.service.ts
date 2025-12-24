@@ -3,7 +3,7 @@ import { EscalationStateRepository } from './escalation-state.repository';
 import { EscalationProfileRepository } from './escalation-profile.repository';
 import { NotFoundError } from '../../common/exceptions';
 import type { IEscalationStateService } from '@er/interfaces';
-import type { EscalationState, EscalationCancelReason } from '@er/types';
+import type { EscalationState, EscalationCancelReason, EscalationStatus } from '@er/types';
 
 /**
  * Escalation state service.
@@ -102,7 +102,7 @@ export class EscalationStateService implements IEscalationStateService {
       );
     }
 
-    let status: string;
+    let status: EscalationStatus;
     switch (reason) {
       case 'completed':
         status = 'COMPLETED';

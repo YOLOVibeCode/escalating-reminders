@@ -140,12 +140,11 @@ export class ReminderController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 400, description: 'Invalid duration' })
   async snooze(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') id: string,
     @Body() body: { duration: string },
   ): Promise<{ success: true; data: { id: string; snoozeUntil: Date } }> {
-    const reminderSnoozeService = this.moduleRef.get('ReminderSnoozeService', { strict: false });
-    const result = await reminderSnoozeService.snooze(req.user.id, id, body.duration);
+    const result = await this.reminderSnoozeService.snooze(req.user.sub, id, body.duration);
     return {
       success: true,
       data: {
@@ -162,12 +161,11 @@ export class ReminderController {
   @ApiResponse({ status: 404, description: 'Reminder not found' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async complete(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') id: string,
     @Body() body: { source?: string },
   ): Promise<{ success: true }> {
-    const reminderCompletionService = this.moduleRef.get('ReminderCompletionService', { strict: false });
-    await reminderCompletionService.complete(req.user.id, id, (body.source || 'manual') as any);
+    await this.reminderCompletionService.complete(req.user.sub, id, (body.source || 'manual') as any);
     return { success: true };
   }
 
@@ -178,11 +176,10 @@ export class ReminderController {
   @ApiResponse({ status: 404, description: 'Reminder not found' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async acknowledge(
-    @Request() req: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
     @Param('id') id: string,
   ): Promise<{ success: true }> {
-    const reminderCompletionService = this.moduleRef.get('ReminderCompletionService', { strict: false });
-    await reminderCompletionService.acknowledge(req.user.id, id);
+    await this.reminderCompletionService.acknowledge(req.user.sub, id);
     return { success: true };
   }
 }

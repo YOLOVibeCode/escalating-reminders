@@ -34,8 +34,8 @@ import type {
   AgentStatsFilters,
   AgentSubscriptionFilters,
   AuditLogFilters,
-  AdminAction,
 } from '@er/interfaces';
+import type { AdminAction } from '@er/types';
 
 /**
  * Admin dashboard service.
@@ -217,7 +217,7 @@ export class AdminDashboardService implements IAdminDashboardService {
 
     return {
       user,
-      subscription: user.subscription || undefined,
+      ...(user.subscription ? { subscription: user.subscription } : {}),
       remindersCount: reminders.length,
       activeRemindersCount: activeReminders.length,
       agentSubscriptions,
@@ -491,7 +491,7 @@ export class AdminDashboardService implements IAdminDashboardService {
       return this.getDefaultQueueStats();
     }
 
-    return latestSnapshot.queueStats as QueueStats;
+    return latestSnapshot.queueStats as unknown as QueueStats;
   }
 
   async getWorkerStats(): Promise<WorkerStats> {
@@ -503,7 +503,7 @@ export class AdminDashboardService implements IAdminDashboardService {
       return this.getDefaultWorkerStats();
     }
 
-    return latestSnapshot.workerStats as WorkerStats;
+    return latestSnapshot.workerStats as unknown as WorkerStats;
   }
 
   async getReminderStats(filters?: ReminderStatsFilters): Promise<ReminderStats> {
@@ -863,7 +863,10 @@ export class AdminDashboardService implements IAdminDashboardService {
     let mrr = 0;
     for (const sub of subscriptions) {
       if (sub.paymentHistory.length > 0) {
-        mrr += sub.paymentHistory[0].amount / 100; // Convert cents to dollars
+        const latestPayment = sub.paymentHistory[0];
+        if (latestPayment) {
+          mrr += latestPayment.amount / 100; // Convert cents to dollars
+        }
       }
     }
 

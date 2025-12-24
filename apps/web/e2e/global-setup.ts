@@ -1,5 +1,8 @@
-import { chromium, FullConfig, request } from '@playwright/test';
-import { seedTestData } from './helpers/seed-test-data';
+import { chromium, request, type FullConfig } from '@playwright/test';
+import { clearTestData, seedTestData } from './helpers/seed-test-data';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
 
 /**
  * Global setup runs before all tests
@@ -21,6 +24,10 @@ async function globalSetup(config: FullConfig) {
   const e2eEnv = process.env.E2E_ENV || 'local';
   const isProduction = e2eEnv === 'production' || baseURL.includes('escalating-reminders.com');
   const skipSeeding = process.env.SKIP_SEEDING === 'true' || isProduction;
+  const webhookReceiverPort = process.env.WEBHOOK_RECEIVER_PORT || '3812';
+  const webhookReceiverBaseUrl =
+    process.env.WEBHOOK_RECEIVER_BASE_URL || `http://localhost:${webhookReceiverPort}`;
+  const pidFile = path.resolve(__dirname, '.webhook-receiver.pid');
   
   console.log(`
 ╔════════════════════════════════════════════════════════════════╗
@@ -60,6 +67,12 @@ async function globalSetup(config: FullConfig) {
     console.log('🌱 Seeding test data...');
     try {
       const apiRequest = await request.newContext();
+      const shouldClearFirst =
+        process.env.E2E_RESET_DB === 'true' || (!!process.env.CI && process.env.E2E_RESET_DB !== 'false');
+      if (shouldClearFirst) {
+        console.log('🧼 Clearing existing test data (CI default)...');
+        await clearTestData(apiRequest, apiBaseURL).catch(() => {});
+      }
       await seedTestData(apiRequest, apiBaseURL);
       console.log('   ✅ Test data seeded successfully');
     } catch (error) {
@@ -122,6 +135,46 @@ async function globalSetup(config: FullConfig) {
 ║    ALLOW_DESTRUCTIVE_TESTS=true npm run e2e                     ║
 ╚════════════════════════════════════════════════════════════════╝
 `);
+  }
+
+  // Step 5: Start local webhook receiver (for webhook agent E2E)
+  if (!isProduction) {
+    try {
+      // If a previous run left a receiver running, try to stop it.
+      if (existsSync(pidFile)) {
+        const oldPid = Number(readFileSync(pidFile, 'utf8').trim());
+        if (oldPid) {
+          try {
+            process.kill(oldPid, 'SIGTERM');
+          } catch {
+            // ignore
+          }
+        }
+        try {
+          unlinkSync(pidFile);
+        } catch {
+          // ignore
+        }
+      }
+
+      const serverPath = path.resolve(__dirname, 'webhook-receiver', 'server.js');
+      const child = spawn(process.execPath, [serverPath], {
+        env: {
+          ...process.env,
+          WEBHOOK_RECEIVER_PORT: webhookReceiverPort,
+        },
+        stdio: 'ignore',
+        detached: true,
+      });
+      child.unref();
+      writeFileSync(pidFile, String(child.pid || ''), 'utf8');
+
+      // Warm up receiver
+      await fetch(`${webhookReceiverBaseUrl}/health`).catch(() => {});
+      console.log(`🪝 Webhook receiver ready at ${webhookReceiverBaseUrl}`);
+    } catch (e) {
+      console.warn('⚠️  Failed to start webhook receiver:', (e as Error).message);
+    }
   }
 
   console.log('✅ Global setup complete\n');

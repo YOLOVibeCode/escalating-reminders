@@ -2,8 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserAgentSubscriptionService } from '../user-agent-subscription.service';
 import { UserAgentSubscriptionRepository } from '../user-agent-subscription.repository';
 import { AgentDefinitionRepository } from '../agent-definition.repository';
+import { AgentExecutionService } from '../agent-execution.service';
 import { AuthRepository } from '../../auth/auth.repository';
 import { SUBSCRIPTION_TIERS } from '@er/constants';
+import { QuotaExceededError } from '../../../common/exceptions/quota-exceeded.exception';
+import { NotFoundError } from '../../../common/exceptions/not-found.exception';
+import { ForbiddenError } from '../../../common/exceptions/forbidden.exception';
 import type { UserAgentSubscription, AgentDefinition } from '@er/types';
 
 describe('UserAgentSubscriptionService', () => {
@@ -11,6 +15,7 @@ describe('UserAgentSubscriptionService', () => {
   let subscriptionRepository: UserAgentSubscriptionRepository;
   let agentDefinitionRepository: AgentDefinitionRepository;
   let authRepository: AuthRepository;
+  let agentExecutionService: AgentExecutionService;
 
   const mockSubscriptionRepository = {
     findByUser: jest.fn(),
@@ -31,6 +36,11 @@ describe('UserAgentSubscriptionService', () => {
     findByIdWithSubscription: jest.fn(),
   };
 
+  const mockAgentExecutionService = {
+    execute: jest.fn(),
+    testAgent: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,6 +57,10 @@ describe('UserAgentSubscriptionService', () => {
           provide: AuthRepository,
           useValue: mockAuthRepository,
         },
+        {
+          provide: AgentExecutionService,
+          useValue: mockAgentExecutionService,
+        },
       ],
     }).compile();
 
@@ -60,6 +74,7 @@ describe('UserAgentSubscriptionService', () => {
       AgentDefinitionRepository,
     );
     authRepository = module.get<AuthRepository>(AuthRepository);
+    agentExecutionService = module.get<AgentExecutionService>(AgentExecutionService);
 
     jest.clearAllMocks();
   });
@@ -157,7 +172,7 @@ describe('UserAgentSubscriptionService', () => {
 
       await expect(
         service.subscribe('user_123', 'agent_1', {}),
-      ).rejects.toThrow('QuotaExceededError');
+      ).rejects.toThrow(QuotaExceededError);
     });
 
     it('should throw NotFoundError if agent does not exist', async () => {
@@ -165,7 +180,7 @@ describe('UserAgentSubscriptionService', () => {
 
       await expect(
         service.subscribe('user_123', 'nonexistent', {}),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should check user tier meets agent minimum tier', async () => {
@@ -183,7 +198,7 @@ describe('UserAgentSubscriptionService', () => {
 
       await expect(
         service.subscribe('user_123', 'agent_1', {}),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -220,7 +235,7 @@ describe('UserAgentSubscriptionService', () => {
 
       await expect(
         service.update('user_123', 'nonexistent', {}),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ForbiddenError if user does not own subscription', async () => {
@@ -243,7 +258,7 @@ describe('UserAgentSubscriptionService', () => {
 
       await expect(
         service.update('user_123', 'sub_1', {}),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -287,12 +302,21 @@ describe('UserAgentSubscriptionService', () => {
       };
 
       mockSubscriptionRepository.findById.mockResolvedValue(mockSubscription);
+      mockAgentExecutionService.testAgent.mockResolvedValue({
+        success: true,
+        message: 'ok',
+      });
+      mockSubscriptionRepository.update.mockResolvedValue({
+        ...mockSubscription,
+        lastTestedAt: new Date(),
+        lastTestResult: { success: true, message: 'ok' },
+      });
 
-      // For now, test will be a placeholder
       const result = await service.test('user_123', 'sub_1');
 
       expect(result).toHaveProperty('success');
       expect(result).toHaveProperty('message');
+      expect(mockAgentExecutionService.testAgent).toHaveBeenCalled();
     });
   });
 });

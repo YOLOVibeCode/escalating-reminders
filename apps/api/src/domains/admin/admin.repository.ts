@@ -165,11 +165,6 @@ export class AdminRepository implements IAdminRepository {
         { isPinned: 'desc' },
         { createdAt: 'desc' },
       ],
-      include: {
-        adminUser: {
-          include: { user: true },
-        },
-      },
     });
   }
 

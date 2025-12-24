@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { ILogger, LogLevel } from '@er/interfaces';
+import type { ILogger } from '@er/interfaces';
 
 /**
  * NestJS-based logging service.
@@ -9,42 +9,25 @@ import type { ILogger, LogLevel } from '@er/interfaces';
 export class LoggingService implements ILogger {
   private readonly logger = new Logger(LoggingService.name);
 
-  log(level: LogLevel, message: string, context?: string, metadata?: Record<string, unknown>): void {
-    const logContext = context || LoggingService.name;
-    const logMessage = metadata ? `${message} ${JSON.stringify(metadata)}` : message;
+  debug(message: string, context?: Record<string, unknown>): void {
+    this.logger.debug(message, context ? JSON.stringify(context) : undefined);
+  }
 
-    switch (level) {
-      case 'debug':
-        this.logger.debug(logMessage, logContext);
-        break;
-      case 'info':
-        this.logger.log(logMessage, logContext);
-        break;
-      case 'warn':
-        this.logger.warn(logMessage, logContext);
-        break;
-      case 'error':
-        this.logger.error(logMessage, logContext);
-        break;
-      default:
-        this.logger.log(logMessage, logContext);
+  info(message: string, context?: Record<string, unknown>): void {
+    this.logger.log(message, context ? JSON.stringify(context) : undefined);
+  }
+
+  warn(message: string, context?: Record<string, unknown>): void {
+    this.logger.warn(message, context ? JSON.stringify(context) : undefined);
+  }
+
+  error(message: string, error?: Error, context?: Record<string, unknown>): void {
+    const ctx = context ? JSON.stringify(context) : undefined;
+    if (error) {
+      this.logger.error(message, error.stack, ctx);
+      return;
     }
-  }
-
-  debug(message: string, context?: string, metadata?: Record<string, unknown>): void {
-    this.log('debug', message, context, metadata);
-  }
-
-  info(message: string, context?: string, metadata?: Record<string, unknown>): void {
-    this.log('info', message, context, metadata);
-  }
-
-  warn(message: string, context?: string, metadata?: Record<string, unknown>): void {
-    this.log('warn', message, context, metadata);
-  }
-
-  error(message: string, context?: string, metadata?: Record<string, unknown>): void {
-    this.log('error', message, context, metadata);
+    this.logger.error(message, undefined, ctx);
   }
 }
 

@@ -20,7 +20,12 @@ import { AuthModule } from '../auth/auth.module';
     EscalationStateService,
     EscalationStateRepository,
   ],
-  exports: [EscalationProfileService, EscalationStateService],
+  exports: [
+    EscalationProfileService,
+    EscalationProfileRepository,
+    EscalationStateService,
+    EscalationStateRepository,
+  ],
 })
 export class EscalationModule {}
 

@@ -4,6 +4,8 @@ import type {
   PaginatedResult,
   CreateReminderDto,
   UpdateReminderDto,
+  ReminderImportance,
+  ReminderStatus,
 } from '@er/types';
 
 /**
@@ -24,8 +26,8 @@ export interface ReminderCreateData {
   userId: string;
   title: string;
   description?: string;
-  importance: string;
-  status: string;
+  importance: ReminderImportance;
+  status: ReminderStatus;
   escalationProfileId: string;
   nextTriggerAt?: Date;
 }
@@ -33,9 +35,9 @@ export interface ReminderCreateData {
 export interface ReminderUpdateData {
   title?: string;
   description?: string;
-  importance?: string;
+  importance?: ReminderImportance;
   escalationProfileId?: string;
-  status?: string;
+  status?: ReminderStatus;
   nextTriggerAt?: Date;
   lastTriggeredAt?: Date;
   completedAt?: Date;

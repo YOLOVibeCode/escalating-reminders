@@ -7,6 +7,7 @@ import { AdminRepository } from './admin.repository';
 import { AdminService } from './admin.service';
 import { AdminDashboardService } from './admin-dashboard.service';
 import { AdminAuthorizationService } from './admin-authorization.service';
+import { AdminGuard } from '../../common/guards/admin.guard';
 
 /**
  * Admin module.
@@ -16,6 +17,7 @@ import { AdminAuthorizationService } from './admin-authorization.service';
   imports: [DatabaseModule, CacheModule, EventBusModule],
   controllers: [AdminController],
   providers: [
+    AdminGuard,
     AdminRepository,
     {
       provide: 'IAdminRepository',

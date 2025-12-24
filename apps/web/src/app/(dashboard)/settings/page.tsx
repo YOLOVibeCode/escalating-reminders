@@ -11,7 +11,9 @@ import Link from 'next/link';
 import { Button } from '@er/ui-components';
 
 export default function SettingsPage() {
-  const { data: user, isLoading } = useMe();
+  const meQuery = useMe() as unknown as { data?: any; isLoading: boolean };
+  const user = meQuery.data;
+  const isLoading = meQuery.isLoading;
 
   if (isLoading) {
     return (

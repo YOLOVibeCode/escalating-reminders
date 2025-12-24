@@ -53,10 +53,10 @@ test.describe('Layer 0: Critical Tests', () => {
       timeout: IS_PRODUCTION ? 30000 : 15000,
     });
     
-    // Verify login form is visible
-    const emailInput = page.locator('[data-testid="email-input"], input[type="email"], input[name="email"]').first();
-    const passwordInput = page.locator('[data-testid="password-input"], input[type="password"], input[name="password"]').first();
-    const loginButton = page.locator('[data-testid="login-button"], button[type="submit"]').first();
+    // Verify login form is visible (use stable data-testid selectors)
+    const emailInput = page.locator('[data-testid="email-input"]').first();
+    const passwordInput = page.locator('[data-testid="password-input"]').first();
+    const loginButton = page.locator('[data-testid="login-button"]').first();
     
     // Extended timeout for production (network latency)
     const elementTimeout = IS_PRODUCTION ? 20000 : 10000;

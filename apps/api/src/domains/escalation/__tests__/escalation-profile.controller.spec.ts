@@ -21,7 +21,7 @@ describe('EscalationProfileController', () => {
   };
 
   const mockUser = {
-    id: 'user_123',
+    sub: 'user_123',
     email: 'test@example.com',
   };
 
@@ -81,8 +81,9 @@ describe('EscalationProfileController', () => {
         id: 'profile_123',
         userId: 'user_123',
         name: 'Test Profile',
+        description: null,
         isPreset: false,
-        tiers: [],
+        tiers: [] as any,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -113,7 +114,9 @@ describe('EscalationProfileController', () => {
       const mockProfile: EscalationProfile = {
         id: 'profile_123',
         userId: 'user_123',
-        ...createDto,
+        name: createDto.name,
+        description: createDto.description || null,
+        tiers: createDto.tiers as any,
         isPreset: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -138,8 +141,9 @@ describe('EscalationProfileController', () => {
         id: 'profile_123',
         userId: 'user_123',
         name: 'Updated Name',
+        description: null,
         isPreset: false,
-        tiers: [],
+        tiers: [] as any,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

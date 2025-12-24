@@ -32,7 +32,7 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="rounded-md bg-red-50 p-4">
+      <div className="rounded-md bg-red-50 p-4" data-testid="admin-dashboard-error" role="alert">
         <p className="text-sm text-red-700">
           Failed to load dashboard data. Please try again.
         </p>
@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
   };
 
   const formatPercent = (value: number) => {
-    return `${(value * 100).toFixed(1)}%`;
+    return `${value.toFixed(1)}%`;
   };
 
   const getQueueStatus = (depth: number): 'success' | 'warning' | 'danger' => {
@@ -61,12 +61,6 @@ export default function AdminDashboardPage() {
     if (depth < 50) return 'warning';
     return 'danger';
   };
-
-  const totalQueueDepth =
-    dashboard.queueDepth.reminder +
-    dashboard.queueDepth.notification +
-    dashboard.queueDepth.escalation +
-    dashboard.queueDepth.agent;
 
   return (
     <div className="space-y-6">
@@ -81,9 +75,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{formatCurrency(dashboard.mrr)}</div>
-            <p className="mt-1 text-xs text-gray-500">
-              ARR: {formatCurrency(dashboard.arr)}
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Timestamp: {new Date(dashboard.timestamp).toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -96,9 +88,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{dashboard.activeUsers}</div>
-            <p className="mt-1 text-xs text-gray-500">
-              +{dashboard.newUsersToday} new today
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Last 24 hours</p>
           </CardContent>
         </Card>
 
@@ -124,21 +114,21 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {formatPercent(dashboard.notificationDeliveryRate)}
+              {formatPercent(dashboard.deliveryRate)}
             </div>
             <div className="mt-2">
               <Badge
                 variant={
-                  dashboard.notificationDeliveryRate > 0.95
+                  dashboard.deliveryRate > 95
                     ? 'success'
-                    : dashboard.notificationDeliveryRate > 0.85
+                    : dashboard.deliveryRate > 85
                     ? 'warning'
                     : 'danger'
                 }
               >
-                {dashboard.notificationDeliveryRate > 0.95
+                {dashboard.deliveryRate > 95
                   ? 'Excellent'
-                  : dashboard.notificationDeliveryRate > 0.85
+                  : dashboard.deliveryRate > 85
                   ? 'Good'
                   : 'Needs Attention'}
               </Badge>
@@ -154,32 +144,15 @@ export default function AdminDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalQueueDepth}</div>
-            <div className="mt-2 space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Reminder:</span>
-                <Badge variant={getQueueStatus(dashboard.queueDepth.reminder)}>
-                  {dashboard.queueDepth.reminder}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Notification:</span>
-                <Badge variant={getQueueStatus(dashboard.queueDepth.notification)}>
-                  {dashboard.queueDepth.notification}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Escalation:</span>
-                <Badge variant={getQueueStatus(dashboard.queueDepth.escalation)}>
-                  {dashboard.queueDepth.escalation}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Agent:</span>
-                <Badge variant={getQueueStatus(dashboard.queueDepth.agent)}>
-                  {dashboard.queueDepth.agent}
-                </Badge>
-              </div>
+            <div className="text-3xl font-bold">{dashboard.queueDepth}</div>
+            <div className="mt-2">
+              <Badge variant={getQueueStatus(dashboard.queueDepth)}>
+                {getQueueStatus(dashboard.queueDepth) === 'success'
+                  ? 'Healthy'
+                  : getQueueStatus(dashboard.queueDepth) === 'warning'
+                  ? 'Warning'
+                  : 'Critical'}
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -234,3 +207,4 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreateReminder, useEscalationProfiles } from '@/lib/api-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,12 +19,23 @@ export default function CreateReminderPage() {
   const [importance, setImportance] = useState<ReminderImportance>('MEDIUM');
   const [escalationProfileId, setEscalationProfileId] = useState('');
   const [scheduleType, setScheduleType] = useState<ScheduleType>('ONCE');
-  const [triggerAt, setTriggerAt] = useState('');
+  const [triggerAt, setTriggerAt] = useState(() => {
+    // Pre-fill with 1 hour from now for better UX + stable E2E.
+    const d = new Date(Date.now() + 60 * 60 * 1000);
+    return d.toISOString().slice(0, 16); // yyyy-mm-ddThh:mm
+  });
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [error, setError] = useState<string | null>(null);
 
   const { data: profiles, isLoading: profilesLoading } = useEscalationProfiles();
   const createMutation = useCreateReminder();
+
+  // Auto-select the first escalation profile to avoid dead-end form state.
+  useEffect(() => {
+    if (!escalationProfileId && profiles && profiles.length > 0) {
+      setEscalationProfileId(profiles[0]!.id);
+    }
+  }, [profiles, escalationProfileId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,16 +47,20 @@ export default function CreateReminderPage() {
     }
 
     try {
+      const schedule: any = {
+        type: scheduleType,
+        timezone,
+      };
+      if (scheduleType === 'ONCE' && triggerAt) {
+        schedule.triggerAt = new Date(triggerAt);
+      }
+
       const reminderData: CreateReminderDto = {
         title,
-        description: description || undefined,
+        ...(description ? { description } : {}),
         importance,
         escalationProfileId,
-        schedule: {
-          type: scheduleType,
-          timezone,
-          triggerAt: scheduleType === 'ONCE' && triggerAt ? new Date(triggerAt) : undefined,
-        },
+        schedule,
       };
 
       const reminder = await createMutation.mutateAsync(reminderData);
@@ -70,7 +85,7 @@ export default function CreateReminderPage() {
         <p className="mt-1 text-sm text-gray-600">Set up a new reminder with escalation</p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} data-testid="reminder-form">
         <Card>
           <CardHeader>
             <CardTitle>Reminder Details</CardTitle>
@@ -78,7 +93,7 @@ export default function CreateReminderPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4" data-testid="reminder-error" role="alert">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
@@ -89,6 +104,8 @@ export default function CreateReminderPage() {
               </label>
               <Input
                 id="title"
+                name="title"
+                data-testid="title-input"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -103,6 +120,8 @@ export default function CreateReminderPage() {
               </label>
               <textarea
                 id="description"
+                name="description"
+                data-testid="description-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -117,6 +136,8 @@ export default function CreateReminderPage() {
               </label>
               <select
                 id="importance"
+                name="importance"
+                data-testid="importance-select"
                 required
                 value={importance}
                 onChange={(e) => setImportance(e.target.value as ReminderImportance)}
@@ -143,6 +164,8 @@ export default function CreateReminderPage() {
               </label>
               <select
                 id="escalationProfile"
+                name="escalationProfileId"
+                data-testid="escalation-select"
                 required
                 value={escalationProfileId}
                 onChange={(e) => setEscalationProfileId(e.target.value)}
@@ -171,6 +194,8 @@ export default function CreateReminderPage() {
               </label>
               <select
                 id="scheduleType"
+                name="scheduleType"
+                data-testid="schedule-type-select"
                 required
                 value={scheduleType}
                 onChange={(e) => setScheduleType(e.target.value as ScheduleType)}
@@ -189,6 +214,7 @@ export default function CreateReminderPage() {
                 </label>
                 <Input
                   id="triggerAt"
+                data-testid="triggerAt-input"
                   type="datetime-local"
                   required
                   value={triggerAt}
@@ -240,6 +266,8 @@ export default function CreateReminderPage() {
               </label>
               <Input
                 id="timezone"
+                name="timezone"
+                data-testid="timezone-input"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 className="mt-1"
@@ -255,10 +283,11 @@ export default function CreateReminderPage() {
             variant="outline"
             onClick={() => router.back()}
             disabled={createMutation.isPending}
+            data-testid="cancel-button"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={createMutation.isPending}>
+          <Button type="submit" disabled={createMutation.isPending} data-testid="submit-button">
             {createMutation.isPending ? 'Creating...' : 'Create Reminder'}
           </Button>
         </div>

@@ -27,16 +27,15 @@ import { useAuditLog } from '@/lib/api-client';
 export default function AdminAuditPage() {
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState('');
-  const [adminIdFilter, setAdminIdFilter] = useState('');
+  const [adminUserIdFilter, setAdminUserIdFilter] = useState('');
   const [targetTypeFilter, setTargetTypeFilter] = useState('');
 
-  const { data: auditData, isLoading } = useAuditLog({
-    page,
-    limit: 50,
-    action: actionFilter || undefined,
-    adminId: adminIdFilter || undefined,
-    targetType: targetTypeFilter || undefined,
-  });
+  const auditFilters: any = { page, pageSize: 50 };
+  if (actionFilter) auditFilters.action = actionFilter;
+  if (adminUserIdFilter) auditFilters.adminUserId = adminUserIdFilter;
+  if (targetTypeFilter) auditFilters.targetType = targetTypeFilter;
+
+  const { data: auditData, isLoading } = useAuditLog(auditFilters);
 
   const getActionBadgeVariant = (action: string) => {
     if (action.includes('DELETE') || action.includes('SUSPEND')) {
@@ -76,8 +75,8 @@ export default function AdminAuditPage() {
             <Input
               type="text"
               placeholder="Admin ID..."
-              value={adminIdFilter}
-              onChange={(e) => setAdminIdFilter(e.target.value)}
+              value={adminUserIdFilter}
+              onChange={(e) => setAdminUserIdFilter(e.target.value)}
               className="w-64"
             />
             <Select
@@ -107,7 +106,7 @@ export default function AdminAuditPage() {
             <div className="py-8 text-center text-gray-500">No audit records found</div>
           ) : (
             <>
-              <Table>
+              <Table data-testid="audit-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Timestamp</TableHead>
@@ -122,7 +121,7 @@ export default function AdminAuditPage() {
                   {auditData.items.map((action: any) => (
                     <TableRow key={action.id}>
                       <TableCell className="text-sm">
-                        {new Date(action.timestamp).toLocaleString()}
+                        {new Date(action.createdAt).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-sm">
                         {action.adminUser?.user?.email || action.adminUserId}
@@ -156,7 +155,7 @@ export default function AdminAuditPage() {
               {auditData.pagination && (
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-sm text-gray-500">
-                    Showing {auditData.items.length} of {auditData.pagination.total} actions
+                    Showing {auditData.items.length} of {auditData.pagination.totalItems} actions
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -168,12 +167,12 @@ export default function AdminAuditPage() {
                       Previous
                     </Button>
                     <span className="flex items-center px-3 text-sm">
-                      Page {page} of {auditData.pagination.pages}
+                      Page {page} of {auditData.pagination.totalPages}
                     </span>
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={page >= auditData.pagination.pages}
+                      disabled={page >= auditData.pagination.totalPages}
                       onClick={() => setPage(page + 1)}
                     >
                       Next
@@ -188,3 +187,4 @@ export default function AdminAuditPage() {
     </div>
   );
 }
+

@@ -13,16 +13,29 @@ test.describe('Layer 4: Escalation Profiles CRUD', () => {
   test('04-07: Create escalation profile @feature', async ({ page }) => {
     await page.goto('/settings/escalation-profiles/new');
     
-    const nameInput = page.locator('[data-testid="name-input"], input[name="name"]').first();
+    const nameInput = page.locator('[data-testid="name-input"]').first();
     await nameInput.fill('Test Profile');
     
-    const submitButton = page.locator('[data-testid="submit-button"], button[type="submit"]').first();
+    const submitButton = page.locator('[data-testid="submit-button"]').first();
     await submitButton.click();
     
     await page.waitForURL(/\/settings\/escalation-profiles/, { timeout: 15000 });
   });
 
   test('04-08: Edit escalation profile @feature', async ({ page }) => {
+    // First create a profile to edit
+    await page.goto('/settings/escalation-profiles/new');
+    await page.waitForLoadState('networkidle');
+    
+    const nameInput = page.locator('[data-testid="name-input"]').first();
+    await nameInput.fill('Test Profile to Edit');
+    
+    const submitButton = page.locator('[data-testid="submit-button"]').first();
+    await submitButton.click();
+    
+    await page.waitForURL(/\/settings\/escalation-profiles/, { timeout: 15000 });
+    
+    // Now edit the profile
     await page.goto('/settings/escalation-profiles');
     await page.waitForLoadState('networkidle');
     
@@ -30,12 +43,22 @@ test.describe('Layer 4: Escalation Profiles CRUD', () => {
     if (await editButton.isVisible().catch(() => false)) {
       await editButton.click();
       
-      const nameInput = page.locator('[data-testid="name-input"], input[name="name"]').first();
-      if (await nameInput.isVisible().catch(() => false)) {
-        await nameInput.fill('Updated Profile');
-        const saveButton = page.locator('button[type="submit"]').first();
-        await saveButton.click();
-      }
+      // Should navigate to edit page
+      await page.waitForURL(/\/settings\/escalation-profiles\/.*\/edit/, { timeout: 10000 });
+      
+      // Update the name
+      const editNameInput = page.locator('[data-testid="name-input"], input[name="name"]').first();
+      await editNameInput.fill('Updated Profile Name');
+      
+      // Submit the form
+      const updateButton = page.locator('[data-testid="submit-button"], button[type="submit"]').first();
+      await updateButton.click();
+      
+      // Should redirect back to profiles list
+      await page.waitForURL(/\/settings\/escalation-profiles/, { timeout: 15000 });
+      
+      // Verify the updated name appears
+      await expect(page.locator('text=Updated Profile Name').first()).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -43,7 +66,7 @@ test.describe('Layer 4: Escalation Profiles CRUD', () => {
     await page.goto('/settings/escalation-profiles');
     await page.waitForLoadState('networkidle');
     
-    const deleteButton = page.locator('[data-testid="delete-button"], button:has-text("Delete")').first();
+    const deleteButton = page.locator('[data-testid^="delete-profile-"]').first();
     if (await deleteButton.isVisible().catch(() => false)) {
       await deleteButton.click();
       

@@ -66,7 +66,7 @@ export class AdminAuthorizationService implements IAdminAuthorizationService {
   }
 
   checkPermission(adminUser: AdminUser, permission: AdminPermission): boolean {
-    const rolePermissions = this.PERMISSION_MATRIX[adminUser.role];
+    const rolePermissions = this.PERMISSION_MATRIX[adminUser.role] ?? [];
 
     // SUPER_ADMIN has ALL permission (wildcard)
     if (rolePermissions.includes(AdminPermission.ALL)) {

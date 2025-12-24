@@ -56,6 +56,17 @@ export interface IAdminService {
   unsuspendUser(userId: string, adminUserId: string): Promise<void>;
 
   /**
+   * Disable outbound delivery for a user (no messages sent).
+   * This is distinct from usage suspension.
+   */
+  disableUserDelivery(userId: string, reason: string, adminUserId: string): Promise<void>;
+
+  /**
+   * Re-enable outbound delivery for a user.
+   */
+  enableUserDelivery(userId: string, adminUserId: string): Promise<void>;
+
+  /**
    * Delete a user account (soft delete or hard delete).
    * @throws {NotFoundError} If user doesn't exist
    * @throws {ForbiddenError} If admin lacks permission

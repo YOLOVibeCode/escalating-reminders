@@ -68,7 +68,9 @@ const columns: ColumnDef<Reminder>[] = [
 ];
 
 export default function DashboardPage() {
-  const { data: user, isLoading: userLoading } = useMe();
+  const meQuery = useMe() as unknown as { data?: any; isLoading: boolean };
+  const user = meQuery.data;
+  const userLoading = meQuery.isLoading;
   const { data: remindersData, isLoading: remindersLoading } = useReminders({
     page: 1,
     pageSize: 5,
@@ -96,7 +98,7 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-gray-600">Here's what's happening with your reminders</p>
         </div>
         <Link href="/reminders/new">
-          <Button>Create Reminder</Button>
+          <Button data-testid="create-reminder-button">Create Reminder</Button>
         </Link>
       </div>
 
@@ -162,7 +164,7 @@ export default function DashboardPage() {
             <div className="py-8 text-center text-gray-500">
               <p>No reminders yet. Create your first reminder to get started!</p>
               <Link href="/reminders/new" className="mt-4 inline-block">
-                <Button>Create Reminder</Button>
+                <Button data-testid="create-first-reminder-button">Create Reminder</Button>
               </Link>
             </div>
           )}

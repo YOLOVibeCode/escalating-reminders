@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EscalationStateService } from '../escalation-state.service';
 import { EscalationStateRepository } from '../escalation-state.repository';
 import { EscalationProfileRepository } from '../escalation-profile.repository';
+import { NotFoundError } from '../../../common/exceptions/not-found.exception';
 import type { EscalationState, EscalationProfile } from '@er/types';
 
 describe('EscalationStateService', () => {
@@ -119,7 +120,7 @@ describe('EscalationStateService', () => {
 
       await expect(
         service.start('reminder_123', 'nonexistent'),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -214,7 +215,7 @@ describe('EscalationStateService', () => {
       mockStateRepository.findByReminderId.mockResolvedValue(null);
 
       await expect(service.advance('nonexistent')).rejects.toThrow(
-        'NotFoundError',
+        NotFoundError,
       );
     });
   });

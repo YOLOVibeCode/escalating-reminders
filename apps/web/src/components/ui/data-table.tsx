@@ -26,9 +26,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from '@tanstack/react-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
-import { Button } from './button';
-import { Input } from './input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Button, Input } from '@er/ui-components';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -57,9 +55,9 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
-    getSortedRowModel: sorting ? getSortedRowModel() : undefined,
-    getFilteredRowModel: filtering ? getFilteredRowModel() : undefined,
+    ...(pagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    ...(sorting ? { getSortedRowModel: getSortedRowModel() } : {}),
+    ...(filtering ? { getFilteredRowModel: getFilteredRowModel() } : {}),
     onSortingChange: setSortingState,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -77,7 +75,7 @@ export function DataTable<TData, TValue>({
           <Input
             placeholder={searchPlaceholder}
             value={globalFilter ?? ''}
-            onChange={(event) => setGlobalFilter(String(event.target.value))}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setGlobalFilter(String(event.target.value))}
             className="max-w-sm"
           />
         </div>

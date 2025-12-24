@@ -15,6 +15,9 @@ import type {
   LoginDto,
 } from '@er/types';
 
+export type { ReminderFilters } from '@er/types';
+export type { User } from '@er/types';
+
 /**
  * API response wrapper.
  */
@@ -62,6 +65,14 @@ export interface LoginResponse {
 export interface RefreshResponse {
   accessToken: string;
   expiresIn: number;
+}
+
+/**
+ * OAuth API responses.
+ */
+export interface OAuthAuthorizationUrlResponse {
+  url: string;
+  state: string;
 }
 
 /**

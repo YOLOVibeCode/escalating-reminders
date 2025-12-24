@@ -55,12 +55,18 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const updateData: any = {
+        title,
+        importance,
+      };
+      if (description) {
+        updateData.description = description;
+      }
+
       await updateMutation.mutateAsync({
         id: params.id,
         data: {
-          title,
-          description: description || undefined,
-          importance,
+          ...updateData,
         },
       });
       setIsEditing(false);
@@ -115,7 +121,7 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center" data-testid="reminder-loading">
         <div className="text-lg text-gray-600">Loading reminder...</div>
       </div>
     );
@@ -123,12 +129,12 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
 
   if (error || !reminder) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center" data-testid="reminder-error">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Reminder not found</h2>
           <p className="mt-2 text-gray-600">The reminder you're looking for doesn't exist.</p>
           <Link href="/reminders" className="mt-4 inline-block">
-            <Button>Back to Reminders</Button>
+            <Button data-testid="back-to-reminders-button">Back to Reminders</Button>
           </Link>
         </div>
       </div>
@@ -164,9 +170,9 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
           {!isEditing ? (
             <>
               {reminder.status === 'ACTIVE' && (
-                <Dialog open={showSnoozeDialog} onOpenChange={setShowSnoozeDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">Snooze</Button>
+                <Dialog open={showSnoozeDialog} onOpenChange={setShowSnoozeDialog} data-testid="snooze-dialog">
+                  <DialogTrigger>
+                    <Button variant="outline" data-testid="snooze-trigger-button">Snooze</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -177,18 +183,22 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                     </DialogHeader>
                     <div className="space-y-4">
                       <Input
+                        id="snoozeDuration"
+                        name="snoozeDuration"
+                        data-testid="snooze-duration-input"
                         value={snoozeDuration}
                         onChange={(e) => setSnoozeDuration(e.target.value)}
                         placeholder="e.g., 1 hour, next Friday, in 2 days"
                       />
                     </div>
                     <DialogFooter>
-                      <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
+                      <DialogClose>
+                        <Button variant="outline" data-testid="snooze-cancel-button">Cancel</Button>
                       </DialogClose>
                       <Button
                         onClick={handleSnooze}
                         disabled={snoozeMutation.isPending || !snoozeDuration.trim()}
+                        data-testid="snooze-confirm-button"
                       >
                         {snoozeMutation.isPending ? 'Snoozing...' : 'Snooze'}
                       </Button>
@@ -201,6 +211,7 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                   variant="outline"
                   onClick={handleComplete}
                   disabled={completeMutation.isPending}
+                  data-testid="complete-button"
                 >
                   {completeMutation.isPending ? 'Completing...' : 'Mark Complete'}
                 </Button>
@@ -210,23 +221,24 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                   variant="outline"
                   onClick={handleAcknowledge}
                   disabled={acknowledgeMutation.isPending}
+                  data-testid="acknowledge-button"
                 >
                   {acknowledgeMutation.isPending ? 'Acknowledging...' : 'Acknowledge'}
                 </Button>
               )}
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" onClick={() => setIsEditing(true)} data-testid="edit-button">
                 Edit
               </Button>
-              <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending} data-testid="delete-button">
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button variant="outline" onClick={() => setIsEditing(false)} data-testid="cancel-edit-button">
                 Cancel
               </Button>
-              <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+              <Button onClick={handleUpdate} disabled={updateMutation.isPending} data-testid="save-edit-button">
                 {updateMutation.isPending ? 'Saving...' : 'Save'}
               </Button>
             </>
@@ -235,7 +247,7 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
       </div>
 
       {isEditing ? (
-        <form onSubmit={handleUpdate}>
+        <form onSubmit={handleUpdate} data-testid="reminder-edit-form">
           <Card>
             <CardHeader>
               <CardTitle>Edit Reminder</CardTitle>
@@ -248,7 +260,9 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                 </label>
                 <input
                   id="title"
+                  name="title"
                   type="text"
+                  data-testid="reminder-title-input"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -262,6 +276,8 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                 </label>
                 <textarea
                   id="description"
+                  name="description"
+                  data-testid="reminder-description-input"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -275,6 +291,8 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                 </label>
                 <select
                   id="importance"
+                  name="importance"
+                  data-testid="reminder-importance-select"
                   required
                   value={importance}
                   onChange={(e) => setImportance(e.target.value as ReminderImportance)}
@@ -355,11 +373,11 @@ export default function ReminderDetailPage({ params }: ReminderDetailPageProps) 
                 </div>
               </div>
 
-              {reminder.escalationProfile && (
+              {reminder.escalationProfileId && (
                 <div>
                   <h3 className="text-sm font-medium text-gray-700">Escalation Profile</h3>
                   <p className="mt-1 text-sm text-gray-900">
-                    {reminder.escalationProfile.name}
+                    {reminder.escalationProfileId}
                   </p>
                 </div>
               )}

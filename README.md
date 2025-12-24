@@ -50,6 +50,7 @@ All services use ports in the **38XX** range:
 | 3801 | NestJS API |
 | 3802 | PostgreSQL |
 | 3803 | Redis |
+| 3812 | Webhook Receiver (E2E) |
 | 3810 | MailHog UI |
 | 3811 | MailHog SMTP |
 
@@ -67,8 +68,6 @@ All services use ports in the **38XX** range:
 
 **Decision**: Railway selected as backend platform.  
 See [docs/architecture/INFRASTRUCTURE-DECISION.md](docs/architecture/INFRASTRUCTURE-DECISION.md) for rationale.
-| 3804 | Prisma Studio |
-| 3805 | Storybook |
 
 **Complete Documentation**: [docs/PORT-ASSIGNMENTS.md](docs/PORT-ASSIGNMENTS.md)
 

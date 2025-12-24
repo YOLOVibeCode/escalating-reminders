@@ -115,5 +115,32 @@ export class RedisService implements ICache, OnModuleInit, OnModuleDestroy {
       return false;
     }
   }
+
+  async increment(key: string, by: number = 1): Promise<number> {
+    if (!this.client) {
+      this.logger.warn('Redis client not available');
+      return 0;
+    }
+
+    try {
+      return await this.client.incrby(key, by);
+    } catch (error) {
+      this.logger.error(`Failed to increment key ${key}:`, error);
+      return 0;
+    }
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    if (!this.client) {
+      this.logger.warn('Redis client not available');
+      return;
+    }
+
+    try {
+      await this.client.expire(key, seconds);
+    } catch (error) {
+      this.logger.error(`Failed to expire key ${key}:`, error);
+    }
+  }
 }
 

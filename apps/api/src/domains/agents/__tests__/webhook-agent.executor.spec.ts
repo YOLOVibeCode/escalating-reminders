@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WebhookAgentExecutor } from '../executors/webhook-agent.executor';
-import type { UserAgentSubscription, NotificationPayload } from '@er/types';
+import type { UserAgentSubscription } from '@er/types';
+import type { NotificationPayload } from '@er/interfaces';
 
 // Mock fetch globally
 global.fetch = jest.fn();

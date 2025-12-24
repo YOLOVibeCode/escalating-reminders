@@ -6,10 +6,10 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start": "nest start",
-    "start:api": "node dist/main.js",
+    "start:api": "node dist/apps/api/src/main.js",
     "start:dev": "nest start --watch",
-    "start:worker": "node dist/workers/worker.js",
-    "start:scheduler": "node dist/workers/scheduler.js",
+    "start:worker": "node dist/apps/api/src/workers/worker.js",
+    "start:scheduler": "node dist/apps/api/src/workers/scheduler.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -21,7 +21,8 @@
     "prisma:migrate": "prisma migrate dev --schema=./prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=./prisma/schema.prisma --port 3804",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "db:seed-admin": "ts-node src/scripts/seed-admin.ts"
+    "db:seed-admin": "ts-node src/scripts/seed-admin.ts",
+    "square:setup": "npx --yes tsx src/scripts/square-setup.ts"
   },
   "dependencies": {
     "@er/constants": "file:../../packages/@er/constants",
@@ -45,7 +46,9 @@
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.1.14",
     "rxjs": "^7.8.1",
-    "uuid": "^9.0.1"
+    "square": "^40.0.0",
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.1",

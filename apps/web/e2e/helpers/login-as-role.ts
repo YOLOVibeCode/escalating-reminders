@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 export type TestRole = 'user' | 'admin';
 
@@ -60,15 +60,15 @@ export async function loginAsRole(
   // Navigate to login page
   await page.goto('/login');
   
-  // Wait for login form to be visible
-  await page.waitForSelector('[data-testid="email-input"], input[type="email"]', { 
+  // Wait for login form to be visible (prioritize data-testid)
+  await page.waitForSelector('[data-testid="email-input"]', { 
     timeout: isProduction ? timeout * 2 : timeout 
   });
   
-  // Fill in credentials
-  const emailInput = page.locator('[data-testid="email-input"], input[type="email"]').first();
-  const passwordInput = page.locator('[data-testid="password-input"], input[type="password"]').first();
-  const loginButton = page.locator('[data-testid="login-button"], button[type="submit"]').first();
+  // Fill in credentials (use stable data-testid selectors)
+  const emailInput = page.locator('[data-testid="email-input"]').first();
+  const passwordInput = page.locator('[data-testid="password-input"]').first();
+  const loginButton = page.locator('[data-testid="login-button"]').first();
   
   await emailInput.fill(credentials.email);
   await passwordInput.fill(credentials.password);

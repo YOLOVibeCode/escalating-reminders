@@ -12,18 +12,28 @@ Any agent that implements this specification is guaranteed to work with the Esca
 2. [Agent Types](#agent-types)
 3. [Communication Modes](#communication-modes)
 4. [Webhook Agent Specification](#webhook-agent-specification)
-5. [Pull Agent Specification](#pull-agent-specification)
-6. [Command Interface](#command-interface)
-7. [Security](#security)
-8. [Configuration Schema](#configuration-schema)
-9. [Error Handling](#error-handling)
-10. [SDK & Examples](#sdk--examples)
+5. [Email Agent (MVP)](#email-agent-mvp)
+6. [Pull Agent Specification](#pull-agent-specification)
+7. [Command Interface](#command-interface)
+8. [Security](#security)
+9. [Configuration Schema](#configuration-schema)
+10. [Error Handling](#error-handling)
+11. [SDK & Examples](#sdk--examples)
 
 ---
 
 ## Overview
 
 Notification Agents are pluggable delivery mechanisms that receive reminder notifications and optionally send commands back to the system (snooze, dismiss, complete).
+
+### MVP Scope (v1)
+
+For the MVP, **Escalating Reminders officially supports**:
+
+- **`email`**: First-party outbound email delivery (built-in agent executor).
+- **`webhook`**: Push delivery to a third-party agent endpoint via HTTP `POST`.
+
+Next up (post-MVP): **`sms`**, **`ios`**, **`apple_watch`**, **`alexa`**.
 
 ### Conformance Levels
 
@@ -39,10 +49,10 @@ Notification Agents are pluggable delivery mechanisms that receive reminder noti
 ## Agent Types
 
 ```
-AgentType = "EMAIL" | "SMS" | "WEBHOOK" | "PUSH" | "ALEXA" | "APPLE_WATCH" | "CUSTOM"
+AgentType = "email" | "webhook" | "sms" | "ios" | "apple_watch" | "alexa" | "custom"
 ```
 
-Each agent type has predefined capabilities and configuration requirements.
+**Important:** In the Escalating Reminders database and APIs, agent identifiers are **lowercase** strings (e.g. `email`, `webhook`).
 
 ---
 
@@ -261,6 +271,25 @@ interface WebhookErrorResponse {
 - Initial delay: 30 seconds
 - Backoff multiplier: 2x
 - Max delay: 5 minutes
+
+---
+
+## Email Agent (MVP)
+
+The **`email`** agent is a **first-party** delivery mechanism implemented inside the Escalating Reminders backend. It is included in the MVP so reminder flows can be validated end-to-end (including escalation tiers) without requiring a third-party integration.
+
+### Configuration
+
+- **User configuration**: none (subscription enables/disables email delivery)
+- **System configuration**: SMTP settings via environment variables (development commonly uses MailHog)
+
+### Delivery Contract
+
+- A notification is considered delivered when the SMTP server accepts the message.
+- The generated email body must include at minimum:
+  - `Reminder ID`
+  - `Tier`
+  - available `Actions` (when present)
 
 ---
 
@@ -646,6 +675,19 @@ app.post('/webhook', (req, res) => {
 
 ---
 
+## Agent Certification Checklist
+
+An agent implementation is considered “certified” against this spec when it satisfies:
+
+- **Receives notifications**: accepts the Webhook payload and returns a `2xx` quickly (< 2s recommended).
+- **Verifies signatures**: validates `X-Webhook-Signature` when a secret is configured.
+- **Idempotent handling**: safely handles retries for the same `notificationId`.
+- **Observability**: logs `X-Request-Id` and `X-Notification-Id` for traceability.
+- **Failure behavior**: returns `4xx` for non-retryable problems and `5xx/429` for retryable ones.
+- **Security**: secrets stored securely; no sensitive data echoed back in responses.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
@@ -656,16 +698,17 @@ app.post('/webhook', (req, res) => {
 
 ## Conformance Testing
 
-Use our conformance test suite to validate your agent:
+For the MVP (email + webhook), the repo includes end-to-end conformance checks:
+
+- **Email**: Playwright integration test asserts delivery via **MailHog**.
+- **Webhook**: Playwright integration test asserts an actual outbound webhook `POST` against the built-in local receiver.
+
+Run:
 
 ```bash
-npx @escalating-reminders/agent-conformance test \
-  --url https://your-agent.com/webhook \
-  --secret your_webhook_secret \
-  --level 2
+cd apps/web
+CI=1 npm run e2e:integration
 ```
-
-This will run all tests for Level 2 conformance.
 
 ---
 

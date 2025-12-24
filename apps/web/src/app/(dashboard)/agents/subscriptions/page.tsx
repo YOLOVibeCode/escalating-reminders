@@ -104,7 +104,7 @@ export default function AgentSubscriptionsPage() {
       )}
 
       {/* Test Result Dialog */}
-      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen} data-testid="test-result-dialog">
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Test Result</DialogTitle>
@@ -119,6 +119,7 @@ export default function AgentSubscriptionsPage() {
               className={`rounded-md p-4 ${
                 testResult?.success ? 'bg-green-50' : 'bg-red-50'
               }`}
+              data-testid="test-result-message"
             >
               <p
                 className={`text-sm ${
@@ -135,7 +136,7 @@ export default function AgentSubscriptionsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => setTestDialogOpen(false)}>Close</Button>
+            <Button onClick={() => setTestDialogOpen(false)} data-testid="test-result-close-button">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -158,11 +159,12 @@ function SubscriptionCard({
   isUnsubscribing,
   isTesting,
 }: SubscriptionCardProps) {
+  const agentType = (subscription as any).agentDefinition?.type || (subscription as any).agentDefinitionId;
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg capitalize">{subscription.agentType}</CardTitle>
+          <CardTitle className="text-lg capitalize">{agentType}</CardTitle>
           <span
             className={`rounded-full px-2 py-1 text-xs font-semibold ${
               subscription.isEnabled
@@ -186,8 +188,8 @@ function SubscriptionCard({
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Link href={`/agents/${subscription.agentType}/configure`} className="flex-1">
-            <Button variant="outline" className="w-full" size="sm">
+          <Link href={`/agents/${agentType}/configure`} className="flex-1">
+            <Button variant="outline" className="w-full" size="sm" data-testid={`configure-subscription-${subscription.id}-button`}>
               Configure
             </Button>
           </Link>
@@ -196,6 +198,7 @@ function SubscriptionCard({
             size="sm"
             onClick={() => onTest(subscription.id)}
             disabled={isTesting}
+            data-testid={`test-subscription-${subscription.id}-button`}
           >
             {isTesting ? 'Testing...' : 'Test'}
           </Button>
@@ -204,6 +207,7 @@ function SubscriptionCard({
             size="sm"
             onClick={() => onUnsubscribe(subscription.id)}
             disabled={isUnsubscribing}
+            data-testid={`remove-subscription-${subscription.id}-button`}
           >
             {isUnsubscribing ? '...' : 'Remove'}
           </Button>

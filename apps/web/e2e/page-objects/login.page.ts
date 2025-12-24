@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 export class LoginPage {
   readonly page: Page;
@@ -10,11 +10,12 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.locator('[data-testid="email-input"], input[type="email"]').first();
-    this.passwordInput = page.locator('[data-testid="password-input"], input[type="password"]').first();
-    this.loginButton = page.locator('[data-testid="login-button"], button[type="submit"]').first();
-    this.registerLink = page.locator('a[href*="register"], [data-testid="register-link"]').first();
-    this.errorMessage = page.locator('[data-testid="error-message"], .error, [role="alert"]').first();
+    // Prioritize data-testid selectors for stability
+    this.emailInput = page.locator('[data-testid="email-input"]').first();
+    this.passwordInput = page.locator('[data-testid="password-input"]').first();
+    this.loginButton = page.locator('[data-testid="login-button"]').first();
+    this.registerLink = page.locator('[data-testid="register-link"]').first();
+    this.errorMessage = page.locator('[data-testid="login-error"]').first();
   }
 
   async goto() {

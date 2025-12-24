@@ -16,13 +16,9 @@ services:
 
   mailhog:
     environment:
-      MH_STORAGE: maildir
-      MH_MAILDIR_PATH: /maildir
-    volumes:
-      - mailhog_data:/maildir
+      # Use in-memory storage for reliable E2E assertions
+      MH_STORAGE: memory
 
 volumes:
   postgres_data_dev:
-    driver: local
-  mailhog_data:
     driver: local

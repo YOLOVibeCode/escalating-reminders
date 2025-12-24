@@ -14,15 +14,16 @@ test.describe('Layer 4: Agents CRUD', () => {
     await page.goto('/agents');
     await page.waitForLoadState('networkidle');
     
-    const subscribeButton = page.locator('[data-testid="subscribe-button"], button:has-text("Subscribe")').first();
+    const subscribeButton = page.locator('[data-testid^="subscribe-agent-"]').first();
     if (await subscribeButton.isVisible().catch(() => false)) {
       await subscribeButton.click();
       
       // Fill configuration if form appears
-      const configInput = page.locator('[data-testid="config-input"], input').first();
+      await page.waitForURL(/\/agents\/.*\/configure/, { timeout: 5000 }).catch(() => {});
+      const configInput = page.locator('[data-testid^="agent-config-"]').first();
       if (await configInput.isVisible({ timeout: 2000 }).catch(() => false)) {
         await configInput.fill('test-config');
-        const saveButton = page.locator('button[type="submit"]').first();
+        const saveButton = page.locator('[data-testid="submit-button"]').first();
         await saveButton.click();
       }
       
@@ -34,16 +35,16 @@ test.describe('Layer 4: Agents CRUD', () => {
     await page.goto('/agents/subscriptions');
     await page.waitForLoadState('networkidle');
     
-    const configureButton = page.locator('[data-testid="configure-button"], button:has-text("Configure")').first();
+    const configureButton = page.locator('[data-testid^="configure-subscription-"]').first();
     if (await configureButton.isVisible().catch(() => false)) {
       await configureButton.click();
       
       await page.waitForURL(/\/agents\/.*\/configure/, { timeout: 10000 });
       
-      const configInput = page.locator('[data-testid="config-input"], input').first();
+      const configInput = page.locator('[data-testid^="agent-config-"]').first();
       if (await configInput.isVisible().catch(() => false)) {
         await configInput.fill('updated-config');
-        const saveButton = page.locator('button[type="submit"]').first();
+        const saveButton = page.locator('[data-testid="submit-button"]').first();
         await saveButton.click();
       }
     }
@@ -53,7 +54,7 @@ test.describe('Layer 4: Agents CRUD', () => {
     await page.goto('/agents/subscriptions');
     await page.waitForLoadState('networkidle');
     
-    const unsubscribeButton = page.locator('[data-testid="unsubscribe-button"], button:has-text("Unsubscribe")').first();
+    const unsubscribeButton = page.locator('[data-testid^="remove-subscription-"]').first();
     if (await unsubscribeButton.isVisible().catch(() => false)) {
       await unsubscribeButton.click();
       
@@ -70,12 +71,13 @@ test.describe('Layer 4: Agents CRUD', () => {
     await page.goto('/agents/subscriptions');
     await page.waitForLoadState('networkidle');
     
-    const testButton = page.locator('[data-testid="test-button"], button:has-text("Test")').first();
+    const testButton = page.locator('[data-testid^="test-subscription-"]').first();
     if (await testButton.isVisible().catch(() => false)) {
       await testButton.click();
       
-      // Wait for success message
-      const successMessage = page.locator('[data-testid="success-message"], .success').first();
+      // Wait for test result dialog
+      await page.waitForSelector('[data-testid="test-result-dialog"]', { timeout: 5000 }).catch(() => {});
+      const successMessage = page.locator('[data-testid="test-result-message"]').first();
       await successMessage.isVisible({ timeout: 5000 }).catch(() => {
         // Test might complete without visible message
       });

@@ -105,12 +105,11 @@ export default function RemindersPage() {
   );
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = useReminders({
-    status: statusFilter,
-    importance: importanceFilter,
-    page,
-    pageSize: 20,
-  });
+  const reminderFilters: Record<string, unknown> = { page, pageSize: 20 };
+  if (statusFilter) reminderFilters.status = statusFilter;
+  if (importanceFilter) reminderFilters.importance = importanceFilter;
+
+  const { data, isLoading, error } = useReminders(reminderFilters as any);
 
   const reminders = data?.items || [];
   const pagination = data?.pagination;
@@ -141,7 +140,7 @@ export default function RemindersPage() {
           </p>
         </div>
         <Link href="/reminders/new">
-          <Button>Create Reminder</Button>
+          <Button data-testid="create-reminder-button">Create Reminder</Button>
         </Link>
       </div>
 
@@ -154,8 +153,11 @@ export default function RemindersPage() {
         <CardContent>
           <div className="flex gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700">Status</label>
               <select
+                id="status-filter"
+                name="statusFilter"
+                data-testid="status-filter-select"
                 value={statusFilter || ''}
                 onChange={(e) =>
                   setStatusFilter(e.target.value ? (e.target.value as ReminderStatus) : undefined)
@@ -170,8 +172,11 @@ export default function RemindersPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Importance</label>
+              <label htmlFor="importance-filter" className="block text-sm font-medium text-gray-700">Importance</label>
               <select
+                id="importance-filter"
+                name="importanceFilter"
+                data-testid="importance-filter-select"
                 value={importanceFilter || ''}
                 onChange={(e) =>
                   setImportanceFilter(
@@ -195,6 +200,7 @@ export default function RemindersPage() {
                     setStatusFilter(undefined);
                     setImportanceFilter(undefined);
                   }}
+                  data-testid="clear-filters-button"
                 >
                   Clear Filters
                 </Button>
@@ -234,6 +240,7 @@ export default function RemindersPage() {
                       size="sm"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
+                      data-testid="pagination-previous-button"
                     >
                       Previous
                     </Button>
@@ -242,6 +249,7 @@ export default function RemindersPage() {
                       size="sm"
                       onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
                       disabled={page === pagination.totalPages}
+                      data-testid="pagination-next-button"
                     >
                       Next
                     </Button>
@@ -256,7 +264,7 @@ export default function RemindersPage() {
                 <p className="mt-2 text-sm">Try adjusting your filters.</p>
               ) : (
                 <Link href="/reminders/new" className="mt-4 inline-block">
-                  <Button>Create Your First Reminder</Button>
+                  <Button data-testid="create-first-reminder-button">Create Your First Reminder</Button>
                 </Link>
               )}
             </div>

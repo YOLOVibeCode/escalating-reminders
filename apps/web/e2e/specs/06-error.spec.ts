@@ -33,7 +33,7 @@ test.describe('Layer 6: Error Handling', () => {
     await page.waitForLoadState('networkidle');
     
     // Should show error message or redirect
-    const errorMessage = page.locator('[data-testid="error-message"], .error, [role="alert"]').first();
+    const errorMessage = page.locator('[data-testid="reminder-error"]').first();
     const hasError = await errorMessage.isVisible().catch(() => false);
     const isRedirected = page.url().includes('/reminders') && !page.url().includes('non-existent');
     
@@ -46,13 +46,13 @@ test.describe('Layer 6: Error Handling', () => {
     await page.goto('/reminders/new');
     
     // Try to submit empty form
-    const submitButton = page.locator('[data-testid="submit-button"], button[type="submit"]').first();
+    const submitButton = page.locator('[data-testid="submit-button"]').first();
     await submitButton.click();
     
     await page.waitForTimeout(1000);
     
     // Should show validation errors
-    const validationError = page.locator('[data-testid="error"], .error, [role="alert"], text=/required|invalid/i').first();
+    const validationError = page.locator('[data-testid="reminder-error"]').first();
     const hasValidationError = await validationError.isVisible().catch(() => false);
     
     // Or form should still be visible (not submitted)
@@ -69,15 +69,22 @@ test.describe('Layer 6: Error Handling', () => {
     await context.setOffline(true);
     
     try {
-      await page.goto('/reminders');
-      await page.waitForTimeout(2000);
+      // When offline, navigation itself may fail (browser-level error).
+      const navError = await page.goto('/reminders').then(
+        () => null,
+        (e) => e as Error,
+      );
+      await page.waitForTimeout(1000);
       
       // Should show error or offline message
       const offlineMessage = page.locator('text=/offline|network|connection/i').first();
       const hasOfflineMessage = await offlineMessage.isVisible().catch(() => false);
       
-      // Or page should show cached content or error
-      expect(hasOfflineMessage || page.url().includes('/reminders')).toBeTruthy();
+      // Accept either a visible offline UX OR a known navigation error.
+      const gotExpectedNavError =
+        !!navError && /ERR_INTERNET_DISCONNECTED|net::ERR/i.test(navError.message);
+
+      expect(hasOfflineMessage || gotExpectedNavError).toBeTruthy();
     } finally {
       await context.setOffline(false);
     }
@@ -86,8 +93,18 @@ test.describe('Layer 6: Error Handling', () => {
   test('06-05: Session expiry @error', async ({ page }) => {
     await loginAsRole(page, 'user');
     
-    // Clear cookies to simulate expired session
-    await page.context().clearCookies();
+    // Clear client-side auth persistence (Zustand persist + cookie).
+    await page.evaluate(() => {
+      try {
+        window.localStorage.removeItem('auth-storage');
+      } catch {}
+      try {
+        window.sessionStorage.clear();
+      } catch {}
+      try {
+        document.cookie = 'auth-storage=; path=/; max-age=0';
+      } catch {}
+    });
     
     // Try to access protected route
     await page.goto('/dashboard');

@@ -21,15 +21,15 @@ This document defines the fail-fast test pyramid architecture for Escalating Rem
                                     │  Error Handling   │  ↑ If L5 fails → skip
                                     └─────────┬─────────┘
                                ┌──────────────┴──────────────┐
-                               │   Layer 5: @integration     │  5 tests
+                               │   Layer 5: @integration     │  8 tests
                                │   Cross-Role Workflows      │  ↑ If L4 fails → skip
                                └──────────────┬──────────────┘
                           ┌───────────────────┴───────────────────┐
-                          │       Layer 4: @feature               │  ~30 tests
+                          │       Layer 4: @feature               │  31 tests
                           │       CRUD Operations per Role        │  ↑ If L3 fails → skip
                           └───────────────────┬───────────────────┘
                      ┌────────────────────────┴────────────────────────┐
-                     │            Layer 3: @navigation                 │  ~40 tests
+                     │            Layer 3: @navigation                 │  40 tests
                      │            Sidebar Navigation Works             │  ↑ If L2 fails → skip
                      └────────────────────────┬────────────────────────┘
                 ┌─────────────────────────────┴─────────────────────────┐
@@ -41,7 +41,7 @@ This document defines the fail-fast test pyramid architecture for Escalating Rem
            │                    All Roles Can Authenticate                │  ↑ If L0 fails → skip
            └──────────────────────────────────┬──────────────────────────┘
       ┌───────────────────────────────────────┴───────────────────────────┐
-      │                        Layer 0: @critical                          │  3 tests
+      │                        Layer 0: @critical                          │  4 tests
       │                        App Loads, Login Page Works                 │  SERIAL MODE
       └────────────────────────────────────────────────────────────────────┘
 ```
@@ -56,11 +56,21 @@ This document defines the fail-fast test pyramid architecture for Escalating Rem
 | **Admin** | All resources, admin panel | Layers 1-6 |
 | **Unauthenticated** | Public pages only | Layer 0 |
 
+## Account Delivery States (E2E Coverage)
+
+In addition to role-based access, E2E must validate **delivery behavior** under these account states:
+
+| State | Meaning | Expected UX / Behavior |
+|-------|---------|------------------------|
+| **ACTIVE** | Normal delivery | Notifications deliver via configured agents |
+| **DELIVERY_DISABLED** | Deliverability turned off by admin | **No outbound notifications** (email/webhook/etc.) |
+| **USAGE_SUSPENDED** | Throttled due to usage | Limited outbound delivery per window; default reset window **every 3 days** |
+
 ---
 
 ## Layer Definitions
 
-### Layer 0: @critical (3 tests)
+### Layer 0: @critical (4 tests)
 
 **Purpose**: Absolute minimum viability. If these fail, nothing else matters.
 
@@ -69,6 +79,7 @@ This document defines the fail-fast test pyramid architecture for Escalating Rem
 | `00-01` | App loads | Home page returns 200 | 30s |
 | `00-02` | Login page renders | Login form is visible | 30s |
 | `00-03` | API health check | `/health` endpoint responds | 30s |
+| `00-04` | API responds to authenticated endpoints | Auth endpoint returns 401/403 (not 500) | 30s |
 
 **Execution Mode**: Serial (one by one)  
 **Fail Behavior**: Stop immediately on first failure  
@@ -264,7 +275,7 @@ This document defines the fail-fast test pyramid architecture for Escalating Rem
 
 ---
 
-### Layer 5: @integration (5 tests)
+### Layer 5: @integration (8 tests)
 
 **Purpose**: Cross-role and cross-feature workflows.
 
@@ -275,6 +286,9 @@ This document defines the fail-fast test pyramid architecture for Escalating Rem
 | `05-03` | Reminder escalation flow | Create → trigger → notify | 120s |
 | `05-04` | Agent webhook delivery | Webhook fires on trigger | 90s |
 | `05-05` | Full reminder lifecycle | Create → snooze → complete | 120s |
+| `05-06` | Email notification delivered (MailHog) | Email delivers and content asserts | 120s |
+| `05-07` | Delivery disabled blocks sends | No MailHog + no webhook when delivery disabled | 120s |
+| `05-08` | Usage suspended throttles sends | Limited deliveries per 3-day window | 120s |
 
 **Execution Mode**: Serial (complex dependencies)  
 **Fail Behavior**: If any fail → skip Layer 6  

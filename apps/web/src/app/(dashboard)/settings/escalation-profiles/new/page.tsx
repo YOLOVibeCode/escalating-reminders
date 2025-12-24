@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCreateEscalationProfile, useAgents } from '@/lib/api-client';
@@ -29,6 +29,23 @@ export default function CreateEscalationProfilePage() {
     },
   ]);
   const [error, setError] = useState<string | null>(null);
+
+  // UX default: auto-select the first agent in tier 1 so the form is immediately submittable.
+  useEffect(() => {
+    if (!agents || agents.length === 0) return;
+    if (tiers.length === 0) return;
+    const first = tiers[0];
+    if (!first) return;
+    if (first.agentIds && first.agentIds.length > 0) return;
+    setTiers([
+      {
+        ...first,
+        agentIds: [agents[0]!.type],
+      },
+      ...tiers.slice(1),
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents]);
 
   const handleAddTier = () => {
     setTiers([
@@ -67,6 +84,7 @@ export default function CreateEscalationProfilePage() {
 
   const handleAgentToggle = (tierIndex: number, agentId: string) => {
     const tier = tiers[tierIndex];
+    if (!tier) return;
     const agentIds = tier.agentIds || [];
     const newAgentIds = agentIds.includes(agentId)
       ? agentIds.filter((id) => id !== agentId)
@@ -89,11 +107,14 @@ export default function CreateEscalationProfilePage() {
     }
 
     try {
-      await createMutation.mutateAsync({
+      const payload: any = {
         name: name.trim(),
-        description: description.trim() || undefined,
         tiers,
-      });
+      };
+      const desc = description.trim();
+      if (desc) payload.description = desc;
+
+      await createMutation.mutateAsync(payload);
       router.push('/settings/escalation-profiles');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create profile. Please try again.');
@@ -113,7 +134,7 @@ export default function CreateEscalationProfilePage() {
         <p className="mt-1 text-sm text-gray-600">Define a custom escalation strategy</p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} data-testid="escalation-profile-form">
         <Card>
           <CardHeader>
             <CardTitle>Profile Details</CardTitle>
@@ -121,7 +142,7 @@ export default function CreateEscalationProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4" data-testid="escalation-profile-error" role="alert">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
@@ -132,6 +153,8 @@ export default function CreateEscalationProfilePage() {
               </label>
               <Input
                 id="name"
+                name="name"
+                data-testid="name-input"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -146,6 +169,8 @@ export default function CreateEscalationProfilePage() {
               </label>
               <textarea
                 id="description"
+                name="description"
+                data-testid="description-textarea"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -160,7 +185,7 @@ export default function CreateEscalationProfilePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Escalation Tiers</h2>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddTier}>
+            <Button type="button" variant="outline" size="sm" onClick={handleAddTier} data-testid="add-tier-button">
               Add Tier
             </Button>
           </div>
@@ -176,6 +201,7 @@ export default function CreateEscalationProfilePage() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleRemoveTier(tierIndex)}
+                      data-testid={`remove-tier-${tierIndex}-button`}
                     >
                       Remove
                     </Button>
@@ -184,11 +210,14 @@ export default function CreateEscalationProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label htmlFor={`delay-${tierIndex}`} className="block text-sm font-medium text-gray-700">
                     Delay (minutes)
                   </label>
                   <Input
+                    id={`delay-${tierIndex}`}
+                    name={`delay-${tierIndex}`}
                     type="number"
+                    data-testid={`tier-${tierIndex}-delay-input`}
                     min="0"
                     value={tier.delayMinutes}
                     onChange={(e) =>
@@ -209,10 +238,13 @@ export default function CreateEscalationProfilePage() {
                     {agents?.map((agent) => (
                       <label
                         key={agent.id}
+                        htmlFor={`agent-${tierIndex}-${agent.type}`}
                         className="flex items-center space-x-2 rounded border p-2 hover:bg-gray-50"
                       >
                         <input
+                          id={`agent-${tierIndex}-${agent.type}`}
                           type="checkbox"
+                          data-testid={`tier-${tierIndex}-agent-${agent.type}-checkbox`}
                           checked={tier.agentIds.includes(agent.type)}
                           onChange={() => handleAgentToggle(tierIndex, agent.type)}
                           className="rounded border-gray-300"
@@ -227,9 +259,11 @@ export default function CreateEscalationProfilePage() {
                 </div>
 
                 <div>
-                  <label className="flex items-center space-x-2">
+                  <label htmlFor={`trusted-contacts-${tierIndex}`} className="flex items-center space-x-2">
                     <input
+                      id={`trusted-contacts-${tierIndex}`}
                       type="checkbox"
+                      data-testid={`tier-${tierIndex}-trusted-contacts-checkbox`}
                       checked={tier.includeTrustedContacts}
                       onChange={(e) =>
                         handleTierChange(tierIndex, 'includeTrustedContacts', e.target.checked)
@@ -255,10 +289,11 @@ export default function CreateEscalationProfilePage() {
             variant="outline"
             onClick={() => router.back()}
             disabled={createMutation.isPending}
+            data-testid="cancel-button"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={createMutation.isPending}>
+          <Button type="submit" disabled={createMutation.isPending} data-testid="submit-button">
             {createMutation.isPending ? 'Creating...' : 'Create Profile'}
           </Button>
         </div>
@@ -266,5 +301,6 @@ export default function CreateEscalationProfilePage() {
     </div>
   );
 }
+
 
 

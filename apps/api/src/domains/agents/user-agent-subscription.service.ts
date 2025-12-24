@@ -11,7 +11,8 @@ import {
   ValidationError,
 } from '../../common/exceptions';
 import type { IUserAgentSubscriptionService } from '@er/interfaces';
-import type { UserAgentSubscription, TestResult } from '@er/types';
+import type { UserAgentSubscription } from '@er/types';
+import type { TestResult } from '@er/interfaces';
 import { randomBytes } from 'crypto';
 
 /**
@@ -53,7 +54,7 @@ export class UserAgentSubscriptionService
       throw new NotFoundError('User subscription not found');
     }
 
-    const userTier = user.subscription.tier;
+    const userTier = user.subscription.tier as keyof typeof SUBSCRIPTION_TIERS;
     const tierConfig = SUBSCRIPTION_TIERS[userTier];
 
     // 3. Check if user tier meets agent minimum tier
@@ -89,9 +90,9 @@ export class UserAgentSubscriptionService
     }
 
     // 6. Generate webhook secret if agent supports webhooks
-    const capabilities = agent.capabilities as Record<string, unknown>;
+    const capabilities = agent.capabilities as any;
     const webhookSecret =
-      capabilities.canPull || capabilities.canReceiveCommands
+      capabilities?.canPull || capabilities?.canReceiveCommands
         ? randomBytes(32).toString('hex')
         : undefined;
 
@@ -101,7 +102,7 @@ export class UserAgentSubscriptionService
       agentDefinitionId: agent.id,
       isEnabled: true,
       configuration,
-      webhookSecret,
+      ...(webhookSecret ? { webhookSecret } : {}),
     });
   }
 

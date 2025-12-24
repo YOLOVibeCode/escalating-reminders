@@ -474,7 +474,11 @@ Detailed specifications are in `docs/architecture/`:
 - [ ] Square subscription billing (Free, Personal, Pro tiers)
 - [ ] Reminder CRUD with scheduling
 - [ ] Basic escalation engine (3 tiers)
-- [ ] 3 notification agents: Email, SMS, Webhook
+- [ ] 2 notification agents (MVP): Email, Webhook (SMS later)
+- [ ] Delivery controls (admin + system-enforced):
+  - [ ] **Disabled delivery**: user receives **no outbound notifications** (email/webhook/etc.)
+  - [ ] **Usage suspended**: user is **throttled by usage**, but still receives a small default allowance
+    - Default reset window: **every 3 days** (configurable by super admin)
 - [ ] Natural language snooze
 - [ ] Simple email watcher (completion detection)
 

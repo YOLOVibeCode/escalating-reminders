@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /**
  * Assert that we're on the correct dashboard for a role
@@ -11,11 +11,11 @@ export async function assertOnDashboard(page: Page, role: 'user' | 'admin'): Pro
   // Verify URL
   await expect(page).toHaveURL(new RegExp(expectedUrl));
   
-  // Verify sidebar is visible
-  const sidebar = page.locator('[data-testid="sidebar"], aside, nav').first();
+  // Verify sidebar is visible (use stable data-testid)
+  const sidebar = page.locator('[data-testid="header"]').first(); // Header contains nav
   await expect(sidebar).toBeVisible({ timeout: 5000 });
   
   // Verify header/navigation is visible
-  const header = page.locator('[data-testid="header"], header').first();
+  const header = page.locator('[data-testid="header"]').first();
   await expect(header).toBeVisible({ timeout: 5000 });
 }

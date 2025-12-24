@@ -18,6 +18,8 @@ describe('AdminDashboardService', () => {
     subscription: {
       count: jest.fn(),
       findMany: jest.fn(),
+      aggregate: jest.fn(),
+      groupBy: jest.fn(),
     },
     paymentHistory: {
       findMany: jest.fn(),
@@ -26,10 +28,12 @@ describe('AdminDashboardService', () => {
     reminder: {
       count: jest.fn(),
       groupBy: jest.fn(),
+      findMany: jest.fn(),
     },
     notificationLog: {
       count: jest.fn(),
       groupBy: jest.fn(),
+      findMany: jest.fn(),
     },
     systemHealthSnapshot: {
       findMany: jest.fn(),
@@ -88,9 +92,12 @@ describe('AdminDashboardService', () => {
 
     it('should calculate overview when cache miss', async () => {
       mockCacheService.get.mockResolvedValue(null);
-      mockPrismaService.subscription.aggregate.mockResolvedValue({
-        _sum: { amount: 1000 },
-      });
+      mockPrismaService.subscription.findMany.mockResolvedValue([
+        {
+          id: 'sub_1',
+          paymentHistory: [{ amount: 10000 }],
+        },
+      ]);
       mockPrismaService.user.count.mockResolvedValue(50);
       mockPrismaService.reminder.count.mockResolvedValue(200);
       mockPrismaService.notificationLog.count
@@ -181,9 +188,12 @@ describe('AdminDashboardService', () => {
         .mockResolvedValueOnce(50) // canceled
         .mockResolvedValueOnce(50); // past due
 
-      mockPrismaService.subscription.aggregate.mockResolvedValue({
-        _sum: { amount: 10000 },
-      });
+      mockPrismaService.subscription.findMany.mockResolvedValue([
+        {
+          id: 'sub_1',
+          paymentHistory: [{ amount: 10000 }],
+        },
+      ]);
 
       mockPrismaService.subscription.groupBy.mockResolvedValue([
         { tier: 'FREE', _count: 500 },
@@ -254,7 +264,7 @@ describe('AdminDashboardService', () => {
 
       const result = await service.getSystemHealth();
 
-      expect(result.status).toBe('degraded');
+      expect(result.status).toBe('down');
     });
   });
 
@@ -273,6 +283,7 @@ describe('AdminDashboardService', () => {
         { importance: 'HIGH', _count: 250 },
         { importance: 'CRITICAL', _count: 50 },
       ]);
+      mockPrismaService.reminder.findMany.mockResolvedValue([]);
 
       const result = await service.getReminderStats();
 
@@ -295,6 +306,7 @@ describe('AdminDashboardService', () => {
         { agentType: 'sms', _count: 300 },
         { agentType: 'webhook', _count: 200 },
       ]);
+      mockPrismaService.notificationLog.findMany.mockResolvedValue([]);
 
       const result = await service.getNotificationStats();
 

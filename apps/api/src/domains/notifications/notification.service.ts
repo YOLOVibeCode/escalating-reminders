@@ -1,14 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NotificationRepository } from './notification.repository';
 import { ReminderRepository } from '../reminders/reminder.repository';
 import { EscalationProfileRepository } from '../escalation/escalation-profile.repository';
 import { AgentExecutionService } from '../agents/agent-execution.service';
 import { NotFoundError } from '../../common/exceptions';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type {
   INotificationService,
   NotificationPayload,
 } from '@er/interfaces';
-import type { NotificationLog } from '@er/types';
+import type { NotificationLog, NotificationStatus } from '@er/types';
 import { v4 as uuid } from 'uuid';
 
 /**
@@ -25,7 +27,115 @@ export class NotificationService implements INotificationService {
     private readonly reminderRepository: ReminderRepository,
     private readonly escalationProfileRepository: EscalationProfileRepository,
     private readonly agentExecutionService: AgentExecutionService,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private getUsageSuspensionWindowDays(): number {
+    const raw = this.configService.get<string>('USAGE_SUSPENSION_WINDOW_DAYS') || '3';
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 3;
+  }
+
+  private getUsageSuspensionAllowancePerWindow(): number {
+    const raw = this.configService.get<string>('USAGE_SUSPENSION_ALLOWANCE_PER_WINDOW') || '3';
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : 3;
+  }
+
+  private getWindowStart(now: Date): { windowStart: Date; nextResetAt: Date } {
+    const days = this.getUsageSuspensionWindowDays();
+    const windowMs = days * 24 * 60 * 60 * 1000;
+    const nowMs = now.getTime();
+    const startMs = Math.floor(nowMs / windowMs) * windowMs;
+    return {
+      windowStart: new Date(startMs),
+      nextResetAt: new Date(startMs + windowMs),
+    };
+  }
+
+  private async evaluateDeliveryPolicy(userId: string): Promise<
+    | { allowed: true; mode: 'ACTIVE' }
+    | { allowed: true; mode: 'USAGE_SUSPENDED'; windowStart: Date; nextResetAt: Date }
+    | { allowed: false; reason: 'DELIVERY_DISABLED' }
+    | { allowed: false; reason: 'USAGE_SUSPENDED_LIMIT_REACHED'; nextResetAt: Date }
+  > {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { userId },
+      select: {
+        deliveryState: true,
+        usageSuspendedUntil: true,
+      },
+    });
+
+    // If we can't resolve a subscription, don't block delivery (shouldn't happen in normal flows).
+    if (!subscription) return { allowed: true, mode: 'ACTIVE' };
+
+    if (subscription.deliveryState === 'DELIVERY_DISABLED') {
+      return { allowed: false, reason: 'DELIVERY_DISABLED' };
+    }
+
+    if (subscription.deliveryState === 'USAGE_SUSPENDED') {
+      const now = new Date();
+      if (subscription.usageSuspendedUntil && subscription.usageSuspendedUntil <= now) {
+        // Suspension window has elapsed; automatically return to ACTIVE.
+        await this.prisma.subscription.update({
+          where: { userId },
+          data: {
+            deliveryState: 'ACTIVE',
+            usageSuspendedAt: null,
+            usageSuspendedUntil: null,
+            usageSuspensionReason: null,
+          },
+        });
+        return { allowed: true, mode: 'ACTIVE' };
+      }
+
+      const { windowStart, nextResetAt } = this.getWindowStart(now);
+      const allowance = this.getUsageSuspensionAllowancePerWindow();
+      if (allowance === 0) {
+        return { allowed: false, reason: 'USAGE_SUSPENDED_LIMIT_REACHED', nextResetAt };
+      }
+
+      const usage = await this.prisma.deliveryWindowUsage.findUnique({
+        where: {
+          userId_windowStart: {
+            userId,
+            windowStart,
+          },
+        },
+        select: { usedCount: true },
+      });
+      const usedCount = usage?.usedCount ?? 0;
+
+      if (usedCount >= allowance) {
+        return { allowed: false, reason: 'USAGE_SUSPENDED_LIMIT_REACHED', nextResetAt };
+      }
+
+      return { allowed: true, mode: 'USAGE_SUSPENDED', windowStart, nextResetAt };
+    }
+
+    return { allowed: true, mode: 'ACTIVE' };
+  }
+
+  private async incrementSuspendedDeliveryUsage(userId: string, windowStart: Date): Promise<void> {
+    await this.prisma.deliveryWindowUsage.upsert({
+      where: {
+        userId_windowStart: {
+          userId,
+          windowStart,
+        },
+      },
+      create: {
+        userId,
+        windowStart,
+        usedCount: 1,
+      },
+      update: {
+        usedCount: { increment: 1 },
+      },
+    });
+  }
 
   async sendTierNotifications(
     reminderId: string,
@@ -73,6 +183,34 @@ export class NotificationService implements INotificationService {
 
     for (const agentType of tierConfig.agentIds) {
       try {
+        // Enforce delivery policy (disabled vs usage-suspended allowance)
+        const policy = await this.evaluateDeliveryPolicy(userId);
+        if (!policy.allowed) {
+          const failureReason =
+            policy.reason === 'DELIVERY_DISABLED'
+              ? 'Delivery disabled for this account'
+              : `Usage suspended: allowance reached (resets at ${policy.nextResetAt.toISOString()})`;
+
+          const blockedLog = await this.notificationRepository.create({
+            userId,
+            reminderId,
+            agentType,
+            tier,
+            status: 'FAILED' as NotificationStatus,
+            metadata: {
+              blocked: true,
+              reason: policy.reason,
+              ...(policy.reason === 'USAGE_SUSPENDED_LIMIT_REACHED'
+                ? { nextResetAt: policy.nextResetAt.toISOString() }
+                : {}),
+            } as unknown,
+            sentAt: new Date(),
+            failureReason,
+          });
+          notificationLogs.push(blockedLog);
+          continue;
+        }
+
         const notificationId = `notif_${uuid()}`;
         const payload: NotificationPayload = {
           notificationId,
@@ -99,17 +237,21 @@ export class NotificationService implements INotificationService {
           payload,
         );
 
+        if (sendResult.success && policy.mode === 'USAGE_SUSPENDED') {
+          await this.incrementSuspendedDeliveryUsage(userId, policy.windowStart);
+        }
+
         // 6. Log notification
         const notificationLog = await this.notificationRepository.create({
           userId,
           reminderId,
           agentType,
           tier,
-          status: sendResult.success ? 'DELIVERED' : 'FAILED',
+          status: (sendResult.success ? 'DELIVERED' : 'FAILED') as NotificationStatus,
           metadata: payload as unknown,
           sentAt: new Date(),
-          deliveredAt: sendResult.deliveredAt,
-          failureReason: sendResult.error,
+          ...(sendResult.deliveredAt ? { deliveredAt: sendResult.deliveredAt } : {}),
+          ...(sendResult.error ? { failureReason: sendResult.error } : {}),
         });
 
         notificationLogs.push(notificationLog);
@@ -134,10 +276,10 @@ export class NotificationService implements INotificationService {
           reminderId,
           agentType,
           tier,
-          status: 'FAILED',
+          status: 'FAILED' as NotificationStatus,
           metadata: {},
           sentAt: new Date(),
-          failureReason: error instanceof Error ? error.message : 'Unknown error',
+          ...(error instanceof Error ? { failureReason: error.message } : { failureReason: 'Unknown error' }),
         });
 
         notificationLogs.push(notificationLog);
@@ -157,6 +299,32 @@ export class NotificationService implements INotificationService {
       `Sending notification via ${agentType} for reminder ${reminderId}`,
     );
 
+    const policy = await this.evaluateDeliveryPolicy(userId);
+    if (!policy.allowed) {
+      const failureReason =
+        policy.reason === 'DELIVERY_DISABLED'
+          ? 'Delivery disabled for this account'
+          : `Usage suspended: allowance reached (resets at ${policy.nextResetAt.toISOString()})`;
+
+      const blockedLog = await this.notificationRepository.create({
+        userId,
+        reminderId,
+        agentType,
+        tier: payload.escalationTier,
+        status: 'FAILED' as NotificationStatus,
+        metadata: {
+          blocked: true,
+          reason: policy.reason,
+          ...(policy.reason === 'USAGE_SUSPENDED_LIMIT_REACHED'
+            ? { nextResetAt: policy.nextResetAt.toISOString() }
+            : {}),
+        } as unknown,
+        sentAt: new Date(),
+        failureReason,
+      });
+      return blockedLog;
+    }
+
     // 1. Execute agent
     const sendResult = await this.agentExecutionService.execute(
       agentType,
@@ -164,17 +332,21 @@ export class NotificationService implements INotificationService {
       payload,
     );
 
+    if (sendResult.success && policy.mode === 'USAGE_SUSPENDED') {
+      await this.incrementSuspendedDeliveryUsage(userId, policy.windowStart);
+    }
+
     // 2. Log notification
     const notificationLog = await this.notificationRepository.create({
       userId,
       reminderId,
       agentType,
       tier: payload.escalationTier,
-      status: sendResult.success ? 'DELIVERED' : 'FAILED',
+      status: (sendResult.success ? 'DELIVERED' : 'FAILED') as NotificationStatus,
       metadata: payload as unknown,
       sentAt: new Date(),
-      deliveredAt: sendResult.deliveredAt,
-      failureReason: sendResult.error,
+      ...(sendResult.deliveredAt ? { deliveredAt: sendResult.deliveredAt } : {}),
+      ...(sendResult.error ? { failureReason: sendResult.error } : {}),
     });
 
     if (!sendResult.success) {
@@ -197,7 +369,7 @@ export class NotificationService implements INotificationService {
     }
 
     await this.notificationRepository.update(notificationId, {
-      status: 'DELIVERED',
+      status: 'DELIVERED' as NotificationStatus,
       deliveredAt: new Date(),
     });
   }

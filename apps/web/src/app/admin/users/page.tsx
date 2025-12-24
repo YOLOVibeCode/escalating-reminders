@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Card,
   CardHeader,
@@ -24,22 +24,17 @@ import {
   Select,
 } from '@er/ui-components';
 import { useUsers, useUserStats, useSuspendUser, useUnsuspendUser } from '@/lib/api-client';
-import type { User } from '@er/types';
 
 export default function AdminUsersPage() {
-  const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
 
-  const { data: usersData, isLoading } = useUsers({
-    page,
-    limit: 20,
-    search: search || undefined,
-    tier: tierFilter || undefined,
-    status: statusFilter || undefined,
-  });
+  const userFilters: any = { page, pageSize: 20 };
+  if (search) userFilters.search = search;
+  if (tierFilter) userFilters.tier = tierFilter;
+
+  const { data: usersData, isLoading } = useUsers(userFilters);
 
   const { data: stats } = useUserStats();
   const suspendMutation = useSuspendUser();
@@ -72,11 +67,11 @@ export default function AdminUsersPage() {
     switch (tier) {
       case 'FREE':
         return 'secondary';
-      case 'BASIC':
+      case 'PERSONAL':
         return 'default';
       case 'PRO':
         return 'success';
-      case 'ENTERPRISE':
+      case 'FAMILY':
         return 'warning';
       default:
         return 'outline';
@@ -121,11 +116,11 @@ export default function AdminUsersPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-gray-500">
-                Suspended
+                New This Week
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.suspended}</div>
+              <div className="text-3xl font-bold">{stats.newThisWeek}</div>
             </CardContent>
           </Card>
         </div>
@@ -150,17 +145,9 @@ export default function AdminUsersPage() {
               >
                 <option value="">All Tiers</option>
                 <option value="FREE">Free</option>
-                <option value="BASIC">Basic</option>
+                <option value="PERSONAL">Personal</option>
                 <option value="PRO">Pro</option>
-                <option value="ENTERPRISE">Enterprise</option>
-              </Select>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
+                <option value="FAMILY">Family</option>
               </Select>
             </div>
           </div>
@@ -172,40 +159,26 @@ export default function AdminUsersPage() {
             <div className="py-8 text-center text-gray-500">No users found</div>
           ) : (
             <>
-              <Table>
+              <Table data-testid="users-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Email</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Tier</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {usersData.items.map((user: User) => (
+                  {usersData.items.map((user: any) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.email}</TableCell>
                       <TableCell>
                         {user.profile?.displayName || '-'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getTierBadgeVariant(user.tier)}>
-                          {user.tier}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            user.status === 'ACTIVE'
-                              ? 'success'
-                              : user.status === 'SUSPENDED'
-                              ? 'danger'
-                              : 'secondary'
-                          }
-                        >
-                          {user.status}
+                        <Badge variant={getTierBadgeVariant(user.subscription?.tier || 'FREE')}>
+                          {user.subscription?.tier || 'FREE'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -213,32 +186,25 @@ export default function AdminUsersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
+                          <Link href={`/admin/users/${user.id}`} data-testid="user-link">
+                            <Button size="sm" variant="outline">View</Button>
+                          </Link>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => router.push(`/admin/users/${user.id}`)}
+                            onClick={() => handleSuspend(user.id)}
+                            disabled={suspendMutation.isPending}
                           >
-                            View
+                            Suspend
                           </Button>
-                          {user.status === 'ACTIVE' ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleSuspend(user.id)}
-                              disabled={suspendMutation.isPending}
-                            >
-                              Suspend
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUnsuspend(user.id)}
-                              disabled={unsuspendMutation.isPending}
-                            >
-                              Unsuspend
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUnsuspend(user.id)}
+                            disabled={unsuspendMutation.isPending}
+                          >
+                            Unsuspend
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -250,7 +216,7 @@ export default function AdminUsersPage() {
               {usersData.pagination && (
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-sm text-gray-500">
-                    Showing {usersData.items.length} of {usersData.pagination.total} users
+                    Showing {usersData.items.length} of {usersData.pagination.totalItems} users
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -262,12 +228,12 @@ export default function AdminUsersPage() {
                       Previous
                     </Button>
                     <span className="flex items-center px-3 text-sm">
-                      Page {page} of {usersData.pagination.pages}
+                      Page {page} of {usersData.pagination.totalPages}
                     </span>
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={page >= usersData.pagination.pages}
+                      disabled={page >= usersData.pagination.totalPages}
                       onClick={() => setPage(page + 1)}
                     >
                       Next
@@ -282,3 +248,4 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+

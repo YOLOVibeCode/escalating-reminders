@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
-import type { EscalationState } from '@er/types';
+import type { EscalationState, EscalationStatus } from '@er/types';
 
 /**
  * Escalation state repository.
@@ -19,10 +19,16 @@ export class EscalationStateRepository {
     profileId: string;
     currentTier: number;
     startedAt: Date;
-    status: string;
+    status: EscalationStatus;
   }): Promise<EscalationState> {
     return this.prisma.escalationState.create({
-      data,
+      data: {
+        reminderId: data.reminderId,
+        profileId: data.profileId,
+        currentTier: data.currentTier,
+        startedAt: data.startedAt,
+        status: data.status,
+      },
     });
   }
 
@@ -45,12 +51,18 @@ export class EscalationStateRepository {
       lastEscalatedAt?: Date;
       acknowledgedAt?: Date;
       acknowledgedBy?: string;
-      status?: string;
+      status?: EscalationStatus;
     },
   ): Promise<EscalationState> {
     return this.prisma.escalationState.update({
       where: { id },
-      data,
+      data: {
+        ...(data.currentTier !== undefined ? { currentTier: data.currentTier } : {}),
+        ...(data.lastEscalatedAt !== undefined ? { lastEscalatedAt: data.lastEscalatedAt } : {}),
+        ...(data.acknowledgedAt !== undefined ? { acknowledgedAt: data.acknowledgedAt } : {}),
+        ...(data.acknowledgedBy !== undefined ? { acknowledgedBy: data.acknowledgedBy } : {}),
+        ...(data.status !== undefined ? { status: data.status } : {}),
+      },
     });
   }
 
@@ -61,7 +73,7 @@ export class EscalationStateRepository {
   async findDueForAdvancement(limit: number): Promise<EscalationState[]> {
     return this.prisma.escalationState.findMany({
       where: {
-        status: 'ACTIVE',
+        status: 'ACTIVE' as EscalationStatus,
       },
       take: limit,
       orderBy: { lastEscalatedAt: 'asc' },

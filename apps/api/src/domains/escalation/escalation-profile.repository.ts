@@ -43,7 +43,13 @@ export class EscalationProfileRepository {
     tiers: unknown;
   }): Promise<EscalationProfile> {
     return this.prisma.escalationProfile.create({
-      data,
+      data: {
+        userId: data.userId,
+        name: data.name,
+        ...(data.description !== undefined ? { description: data.description } : {}),
+        isPreset: data.isPreset,
+        tiers: data.tiers as any,
+      },
     });
   }
 
@@ -60,7 +66,11 @@ export class EscalationProfileRepository {
   ): Promise<EscalationProfile> {
     return this.prisma.escalationProfile.update({
       where: { id },
-      data,
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.description !== undefined ? { description: data.description } : {}),
+        ...(data.tiers !== undefined ? { tiers: data.tiers as any } : {}),
+      },
     });
   }
 

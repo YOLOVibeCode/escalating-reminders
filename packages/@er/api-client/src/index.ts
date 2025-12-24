@@ -30,7 +30,7 @@ export * from './hooks/useAdmin';
 /**
  * Create an API client instance.
  */
-export function createApiClient(config: Parameters<typeof ApiClient>[0]) {
+export function createApiClient(config: ConstructorParameters<typeof ApiClient>[0]) {
   return new ApiClient(config);
 }
 

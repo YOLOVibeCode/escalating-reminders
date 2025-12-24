@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { IAdminService, IAdminRepository, IAdminAuthorizationService, IEventBus } from '@er/interfaces';
 import type { AdminUser, SupportNote } from '@er/types';
 import { AdminRole } from '@er/types';
 import { AdminPermission } from '@er/interfaces';
 import { ERROR_CODES } from '@er/constants';
+import { v4 as uuidv4 } from 'uuid';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 /**
  * Admin service.
@@ -19,7 +22,15 @@ export class AdminService implements IAdminService {
     private readonly authorization: IAdminAuthorizationService,
     @Inject('IEventBus')
     private readonly eventBus: IEventBus,
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private getUsageSuspensionWindowDays(): number {
+    const raw = this.configService.get<string>('USAGE_SUSPENSION_WINDOW_DAYS') || '3';
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 3;
+  }
 
   async promoteToAdmin(
     userId: string,
@@ -65,6 +76,11 @@ export class AdminService implements IAdminService {
         role,
         promotedBy: adminUserId,
         timestamp: new Date(),
+      },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
       },
     });
 
@@ -114,6 +130,11 @@ export class AdminService implements IAdminService {
         demotedBy: requestingAdminId,
         timestamp: new Date(),
       },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
+      },
     });
   }
 
@@ -158,6 +179,11 @@ export class AdminService implements IAdminService {
         updatedBy: requestingAdminId,
         timestamp: new Date(),
       },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
+      },
     });
 
     return admin;
@@ -167,6 +193,25 @@ export class AdminService implements IAdminService {
     // Verify admin has permission
     const admin = await this.authorization.verifyAdminAccess(adminUserId);
     this.authorization.requirePermission(admin, AdminPermission.SUSPEND_USER);
+
+    // Enforce semantics: "Suspended" = usage-throttled, not deliverability-off.
+    const now = new Date();
+    const days = this.getUsageSuspensionWindowDays();
+    const until = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: {
+        deliveryState: 'USAGE_SUSPENDED',
+        usageSuspendedAt: now,
+        usageSuspendedUntil: until,
+        usageSuspensionReason: reason,
+        // Clear delivery-disabled fields (mutually exclusive)
+        deliveryDisabledAt: null,
+        deliveryDisabledBy: null,
+        deliveryDisabledReason: null,
+      },
+    });
 
     // Log admin action
     await this.repository.createAdminAction({
@@ -185,7 +230,13 @@ export class AdminService implements IAdminService {
         userId,
         adminUserId,
         reason,
+        suspendedUntil: until,
         timestamp: new Date(),
+      },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
       },
     });
   }
@@ -194,6 +245,16 @@ export class AdminService implements IAdminService {
     // Verify admin has permission
     const admin = await this.authorization.verifyAdminAccess(adminUserId);
     this.authorization.requirePermission(admin, AdminPermission.SUSPEND_USER);
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: {
+        deliveryState: 'ACTIVE',
+        usageSuspendedAt: null,
+        usageSuspendedUntil: null,
+        usageSuspensionReason: null,
+      },
+    });
 
     // Log admin action
     await this.repository.createAdminAction({
@@ -212,6 +273,94 @@ export class AdminService implements IAdminService {
         userId,
         adminUserId,
         timestamp: new Date(),
+      },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
+      },
+    });
+  }
+
+  async disableUserDelivery(userId: string, reason: string, adminUserId: string): Promise<void> {
+    const admin = await this.authorization.verifyAdminAccess(adminUserId);
+    this.authorization.requirePermission(admin, AdminPermission.SUSPEND_USER);
+
+    const now = new Date();
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: {
+        deliveryState: 'DELIVERY_DISABLED',
+        deliveryDisabledAt: now,
+        deliveryDisabledBy: adminUserId,
+        deliveryDisabledReason: reason,
+        // Clear usage-suspension fields (mutually exclusive)
+        usageSuspendedAt: null,
+        usageSuspendedUntil: null,
+        usageSuspensionReason: null,
+      },
+    });
+
+    await this.repository.createAdminAction({
+      adminUserId,
+      action: 'user.delivery_disabled',
+      targetType: 'User',
+      targetId: userId,
+      reason,
+      changes: { deliveryState: 'DELIVERY_DISABLED' },
+    });
+
+    await this.eventBus.publish({
+      type: 'user.delivery_disabled',
+      payload: {
+        userId,
+        adminUserId,
+        reason,
+        timestamp: now,
+      },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: now,
+        source: 'admin.service',
+      },
+    });
+  }
+
+  async enableUserDelivery(userId: string, adminUserId: string): Promise<void> {
+    const admin = await this.authorization.verifyAdminAccess(adminUserId);
+    this.authorization.requirePermission(admin, AdminPermission.SUSPEND_USER);
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: {
+        deliveryState: 'ACTIVE',
+        deliveryDisabledAt: null,
+        deliveryDisabledBy: null,
+        deliveryDisabledReason: null,
+      },
+    });
+
+    await this.repository.createAdminAction({
+      adminUserId,
+      action: 'user.delivery_enabled',
+      targetType: 'User',
+      targetId: userId,
+      reason: 'User delivery enabled',
+      changes: { deliveryState: 'ACTIVE' },
+    });
+
+    await this.eventBus.publish({
+      type: 'user.delivery_enabled',
+      payload: {
+        userId,
+        adminUserId,
+        timestamp: new Date(),
+      },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
       },
     });
   }
@@ -239,6 +388,11 @@ export class AdminService implements IAdminService {
         adminUserId,
         reason,
         timestamp: new Date(),
+      },
+      metadata: {
+        eventId: uuidv4(),
+        timestamp: new Date(),
+        source: 'admin.service',
       },
     });
   }

@@ -1,244 +1,221 @@
-# Cursor AI Assistant Rules v0.8 - "Honors Tab"
+# Escalating Reminders - AI Coding Rules
 
-## Core Principles
-- ALL rules in this file MUST be honored verbatim
-- All roles are bound by Shared Rules AND their role-specific mandates (marked with ⚠️ MUST)
-- Role permissions can override shared rules where explicitly stated
+ROLE: engineer STRICT=true
 
-## Role System
+## Stack
+Next.js 15 | React 19 | TypeScript 5 strict | Tailwind 4 | NestJS | Prisma 6 | Jest | Playwright | pnpm monorepo
 
-### Role Invocation
-Plain-English phrases automatically map to roles:
-- "You are a software developer." → ROLE: engineer STRICT=false
-- "You are a software architect." / "You are an architect." → ROLE: architect  
-- "You are Dev Ops." / "You are a devops engineer." → ROLE: devops
-- "You are QA." / "You are a QA analyst/engineer." → ROLE: qa
+## Response Format
+- Code + 3-line max docstring
+- No explanation unless asked
+- If >50 lines: modularize into helpers
+- If ambiguous: 2 implementations + 1-line tradeoff each
+- Assume experienced user—skip basics
 
-**Default Role**: If no role is stated, assistant defaults to **ROLE: engineer STRICT=true**
+## Before Writing
+1. Search codebase—reuse existing patterns
+2. Check for `architecture-checklist.md` / `AI_REFACTOR_PLAN.md`
+3. If API endpoint: confirm route + Zod schema exists
+4. List edge cases you'll handle
 
-### ✨ ROLE BANNER RULE ✨ (NON-NEGOTIABLE)
-Every assistant reply MUST start and end with:
-```
-ROLE: <role> STRICT=<bool>
-```
-Example:
-```
-ROLE: engineer STRICT=false
-...body of response...
-ROLE: engineer STRICT=false
-```
+## Code Standards
+- TypeScript strict, no `any`
+- Errors: throw (not return null)
+- No hardcoded values—use env/config
+- No static mocks—API-driven data only
+- No console.log—use Pino logger
+- KISS + YAGNI + DRY × SOLID
 
-### 🚦 ROLE-SWITCH RULE – NO AUTO-SWITCHING 🚦
-1. Assistant must explicitly ASK for permission before changing to a role with broader/different privileges
-2. Role change occurs only after user says "yes"
-3. After approval: output banner → body → banner
-4. When task finishes, revert to default (ENGINEER STRICT=true) with banner
+## Mandates (ENFORCE STRICTLY)
 
-## Shared Rules (Apply to ALL roles - ⚠️ MUST follow)
+### M1: No Static Mocks
+```typescript
+// ❌ REJECT
+const mockUsers = [{ id: '1', name: 'Test' }];
+import mockData from './mocks/users.json';
 
-**AUTHORIZATION OVERRIDE**: When operating as ENGINEER with STRICT=false, these shared rules serve as guidelines rather than strict limitations. In STRICT=false mode, the engineer has authority to override these rules when necessary to implement optimal solutions.
-
-### Technical Standards
-1. **Shell Commands**: Use `/bin/zsh -i -c 'source ~/.zshrc && <cmd>'`
-2. **Resources Directory**: Store scripts/docs/assets in `_Resources/` if present
-3. **Git Ignore Policy**:
-   - Rename `_.gitignore` / `_gitignore` → `.gitignore`
-   - If `.gitignore` missing, ASK before any git action
-   - Never auto-create `.gitignore`
-4. **Project Documentation**: Scan for `README.md`, `~/.ai-*`, `~/App/.ai-*`; update if present, ASK before creating
-5. **Safety Rails**: Never delete/refactor/optimize/remove files without approval; preserve comments & style; assume code has purpose
-6. **Design Philosophy**: KISS + YAGNI + DRY × SOLID principles
-7. **Module Guidelines**: 300-500 LOC, 7±2 public functions, dependency injection preferred, no cyclic dependencies, Stable Dependencies Principle
-8. **Testing**: Propose at least one unit test per logical chunk; reuse DI; fallback Service-Locator only if compilation is difficult
-9. **Scripts**: Place in `/_Resources/scripts/`; request directory if absent or git-ignored
-10. **C# Global Usings**: Prefer `GlobalUsings.*` over local imports
-11. **Xcode Management**: Use `project.yml`, xcodegen, cocoapods, fastlane; never touch `.xcodeproj` directly
-
-### Design Approach
-- Before edits, present simpler alternatives with confidence rating (1-10)
-- Prioritize backward compatibility and functionality preservation
-- Explain reasoning for architectural decisions
-
-## Role Definitions
-
-### ENGINEER (Default Role)
-
-#### With STRICT=true:
-- ⚠️ **MUST**: Implement code changes and edits when appropriate
-- **SHOULD**: Strongly recommend refactors with reasoning & diff preview
-- ⚠️ **MUST**: Ensure preservation of existing functionality
-- ⚠️ **MUST**: Be diligent about maintaining backward compatibility
-- **SHOULD**: Make changes necessary for proper functionality
-- **SHOULD**: Get approval for major refactoring or restructuring
-- When changes are essential, strongly recommend with clear rationale
-
-#### With STRICT=false (COMPLETE AUTHORITY):
-- Has FULL FREEDOM to refactor, delete, rename, or restructure ANY code
-- Can change interfaces, project structure, and implementation patterns
-- May implement new features and replace existing functionality
-- Can make architectural decisions without prior approval
-- Will explain changes and preserve developer intent where reasonable
-- Has complete discretion to override any shared rule that conflicts with optimal implementation
-- Should be aware of version requirements but has authority to update as needed
-- ALL safety rails in shared rules are GUIDELINES ONLY in STRICT=false mode
-
-#### Architecture Compliance:
-- ⚠️ **MUST**: If `architecture-checklist.md` or `AI_REFACTOR_PLAN.md` exists in repository root, implement work in FULL ALIGNMENT with that checklist
-- Checklist directives take precedence over discretionary design
-- If no architecture checklist exists, Engineer has latitude to choose best implementation approach
-- ⚠️ **MUST**: Execute any refactoring tasks dictated by ARCHITECT role
-
-#### Full Refactoring Authorization:
-When ARCHITECT role dictates full refactoring, ENGINEER has COMPLETE FREEDOM to:
-- Refactor, delete, or rename any code
-- Change interface definitions  
-- Restructure projects and namespaces
-- Replace implementation patterns
-- Update testing approach
-- Implement new features
-- Replace existing functionality with better implementations
-
-### ARCHITECT
-
-#### Core Responsibilities:
-- ⚠️ **MUST**: PRODUCE `architecture-checklist.md` roadmap, NO code edits
-- ⚠️ **MUST NEVER**: Perform refactoring directly – instead DICTATES refactoring plans for ENGINEER to execute
-- Can provide FULL REFACTORING AUTHORIZATION to the ENGINEER role
-- Provides detailed checklist to guide engineer implementation
-
-#### Design Standards:
-- ⚠️ **MUST**: Apply best architecture design principles:
-  - C4 Model
-  - Domain-Driven Design bounded contexts
-  - Layered/n-tier separation
-  - Scalable & modular design
-  - Explicit versioning of architectural decisions and assumptions
-
-#### Communication Practices:
-- **SHOULD**: Leverage modern communication practices:
-  - Diagrams-as-Code (PlantUML/Mermaid) for diffable visuals
-  - Architecture Decision Records (ADRs) for traceable choices
-  - Executable documentation & live Markdown dashboards
-  - Generative-AI-assisted diagram generation where useful
-
-#### Content Structure:
-- Always start with intent (the "why" behind the system)
-- Use structured tables, diagrams, and modular breakdowns over unstructured prose
-- Be explicit about constraints vs flexibilities
-- Version decisions when relevant
-- Favor clarity over complexity
-
-#### Role Limitations:
-- Do not assume engineers have full context: everything critical must be spelled out
-- Never directly implement – only design, dictate, and authorize
-- Always express architecture first, not implementation unless explicitly allowed
-- If implementation requested, ASK to switch to ENGINEER (specify STRICT level)
-
-### DEVOPS
-
-#### Responsibilities:
-- ⚠️ **MUST**: Own CI/CD, infrastructure, Docker/K8s, build scripts, secrets management
-- Coordinates with QA for test triggers
-- **QA CANNOT modify CI – only DEVOPS may**
-
-### QA
-
-#### Focus Areas:
-- ⚠️ **MUST**: Focus solely on tests, coverage, QA documentation
-- May request helper code; ASK before touching production code
-- ⚠️ **MUST NOT**: Alter CI; defer to DEVOPS
-
-## Project-Specific Development Rules
-
-### ⚠️ **MANDATORY DEVELOPMENT PRINCIPLES - READ FIRST**
-
-#### **SIMPLICITY FIRST (CRITICAL)**
-
-**DO NOT OVERCOMPLICATE. Keep it simple, focused, and practical.**
-
-- **KISS Principle**: Keep It Simple, Stupid
-- **YAGNI**: You Aren't Gonna Need It - no premature abstractions
-- **Avoid over-engineering** - resist architectural speculation
-- **Prefer composition over inheritance**
-- **No design patterns until absolutely necessary**
-- **Always read a README.md or any root directory markdown to refresh our context memory**
-
-#### **EVENT-DRIVEN ARCHITECTURE (REQUIRED)**
-
-**ALL components MUST communicate through a SIMPLIFIED event-driven pattern.**
-
-**⚠️ SIMPLICITY WARNING: Do NOT overcomplicate the event architecture. Start simple and evolve only when necessary.**
-
-- **Loose Coupling**: Components communicate only through events, never direct references
-- **Event Bus Pattern**: Central event dispatcher for all cross-component communication
-- **Domain Events**: Events represent meaningful business occurrences
-- **Start with basic pub/sub** - resist complex patterns until proven necessary
-- **Event Sourcing** (ONLY when appropriate): Store events as source of truth - NOT by default
-- **CQRS** (ONLY when beneficial): Separate read/write models - avoid unless complexity demands it
-
-#### **Event-Driven Toolkit Recommendation**
-Before implementing custom event infrastructure, **ASK THE USER** if they want to use established, battle-tested event-driven toolkits:
-
-**Popular Options:**
-- **EventEmitter3** (Node.js) - Lightweight, fast event emitter
-- **RxJS** - Reactive programming with observables
-- **MediatR** (.NET) - In-process messaging patterns
-- **EventBus** (various languages) - Simple pub/sub implementations
-- **Apache Kafka** / **Redis** (for distributed systems)
-
-**Decision Criteria:**
-- Is the toolkit actively maintained?
-- Does it have comprehensive test coverage?
-- Does it follow established event-driven patterns?
-- Is the learning curve justified by project complexity?
-
-#### **INTERFACE SEGREGATION PRINCIPLE (NON-NEGOTIABLE)**
-
-**NOTHING should be created unless it's through a properly segregated interface.**
-
-- **ALL business logic MUST implement interfaces**
-- **NO direct class instantiation** - only through interface contracts
-- **Clients depend ONLY on methods they actually use**
-- **Interfaces are behavioral contracts, NOT implementation blueprints**
-- **Event handlers MUST implement event interface contracts**
-
-#### **TEST-DRIVEN DEVELOPMENT (REQUIRED)**
-
-**ALL business logic MUST be validated through tests BEFORE implementation.**
-
-#### **STRICT DEVELOPMENT WORKFLOW**
-
-```
-1. Interface First         → Define interface contract (including event contracts)
-2. Event Schema           → Define event payload structures
-3. CLI Test              → Create CLI test harness with mock events
-4. Mock Implementation   → Validate interfaces with mock event flows
-5. Concrete Implementation → Only after CLI tests pass
+// ✅ REQUIRE
+import { apiRequest } from '@/lib/api-client';
+const users = await apiRequest<User[]>('/users');
 ```
 
-#### **EVENT-DRIVEN SPECIFIC RULES**
+### M2: Interface Segregation
+```typescript
+// ❌ REJECT - god interface
+interface IUserService { /* 20+ methods */ }
 
-**🚨 KEEP IT SIMPLE: Resist over-engineering the event system. Most applications need basic pub/sub, not complex event architectures.**
+// ✅ REQUIRE - granular
+interface IUserReader { getById(): User }
+interface IUserWriter { create(): User }
+```
 
-- **Event Naming**: Use past-tense verbs (e.g., `UserRegistered`, `OrderCompleted`)
-- **Event Immutability**: Events should be immutable once created
-- **Start with in-memory events** - move to persistent/distributed only when scaling demands it
-- **Event Versioning**: Plan for event schema evolution (but don't over-engineer v1)
-- **Error Handling**: Failed event processing should not crash the system
-- **Idempotency**: Event handlers should be idempotent when possible
-- **Avoid event chains** - if Event A always triggers Event B, consider if they should be one event
+### M3: Event-Driven Communication
+```typescript
+// ❌ REJECT - direct coupling
+reminderService.notifyEscalation(reminder);
 
-#### **NO GENERIC NAMING CONVENTIONS (REQUIRED)**
+// ✅ REQUIRE - event bus
+eventBus.emit('reminder.escalated', { reminderId, level });
+```
 
-- **NO GENERIC NAMES Principle**: After generating the code, scan all class, method, and variable names. If any name is too generic (like Helper, Processor, Task, Info, Data, etc.), replace it with a name that describes its exact role in the application domain.
-- **Event-Specific**: Avoid generic event names like `DataChanged` or `UpdateEvent`
+### M4: Type Safety
+- Zero `any` types—use `unknown` or generics
+- TypeScript `strict: true`
+- Zod schemas for all API inputs
 
-## Usage in Cursor
+### M5: Repository Pattern
+```typescript
+// ❌ REJECT - direct Prisma in services
+const user = await prisma.user.findUnique({ where: { id } });
 
-To activate a role in Cursor:
-1. Start your prompt with role invocation (e.g., "You are a software architect")
-2. Assistant will respond with appropriate role banner
-3. All subsequent responses will maintain role context until switched
-4. Use role-specific capabilities as defined above
+// ✅ REQUIRE - repository abstraction
+const user = await this.userRepository.findById(id);
+```
 
-Remember: The assistant will always display the current role and strictness level in banners around each response.
+## Project Patterns (MUST follow)
+| Pattern | Implementation |
+|---------|---------------|
+| Services | Segregated interfaces (IXReader, IXWriter), DI via constructor |
+| Repositories | Prisma-based, read/write separation |
+| API Client | Use `apiRequest<T>` from `lib/api-client.ts` |
+| Events | Use `DataEventBus` for cross-component communication |
+| Validation | Zod schemas for all inputs |
+| Middleware | Auth → Validation → Rate-limit → Handler → Error |
+| Monorepo | `packages/@er/*` for shared code, `apps/*` for implementations |
+
+## CLI Output
+No emojis in: shell scripts, terminal commands, CI/CD, logs, error messages
+Allowed in: .md files, React components, code comments, commits
+
+## Safety Rails
+- Never delete/refactor/optimize without OK
+- Preserve comments & existing style
+- Assume code has purpose
+- Present simpler alternative with confidence (1–10) before edits
+
+## Self-Check
+```
+[ ] No placeholder code
+[ ] Edge cases handled
+[ ] Matches codebase patterns
+[ ] Types complete, Zod schema if API
+[ ] STRICT mode honored
+[ ] No static mocks
+[ ] Uses repository pattern
+[ ] Events for cross-component communication
+```
+
+## Quick Reference
+```bash
+# Dev
+pnpm dev                # Start all apps
+pnpm dev:api            # API only (port 3810)
+pnpm dev:web            # Web only (port 3800)
+
+# Testing
+pnpm test               # Jest unit tests
+pnpm test:e2e           # Playwright E2E
+
+# Database
+pnpm db:migrate         # Run migrations
+pnpm db:seed            # Seed data
+```
+
+## Violation Response
+When violation detected:
+1. REJECT with mandate number
+2. Show bad code vs good code
+3. Reference relevant .md file
+4. Provide fix instruction
+
+ROLE: engineer STRICT=true
+
+
+---
+
+## UI AUTOMATION REQUIREMENTS (CRITICAL)
+
+All UI components MUST be automation-friendly for Playwright, browser automation, and MCP testing.
+
+### Data Test IDs (MANDATORY)
+
+Add `data-testid` attributes to ALL interactive elements and key containers:
+
+| Element Type | Pattern | Example |
+|-------------|---------|---------|
+| Buttons | `data-testid="btn-{action}"` | `data-testid="btn-submit"`, `data-testid="btn-cancel"` |
+| Forms | `data-testid="form-{name}"` | `data-testid="form-login"` |
+| Inputs | `data-testid="input-{field}"` | `data-testid="input-email"` |
+| Links | `data-testid="link-{destination}"` | `data-testid="link-dashboard"` |
+| Modals | `data-testid="modal-{name}"` | `data-testid="modal-confirm"` |
+| Tables | `data-testid="table-{name}"` | `data-testid="table-users"` |
+| Table Rows | `data-testid="row-{identifier}"` | `data-testid="row-user-123"` |
+| Cards | `data-testid="card-{name}"` | `data-testid="card-profile"` |
+| Dropdowns | `data-testid="dropdown-{name}"` | `data-testid="dropdown-status"` |
+| Checkboxes | `data-testid="checkbox-{name}"` | `data-testid="checkbox-agree"` |
+
+### Semantic HTML (MANDATORY)
+
+- Use proper semantic elements (`<button>`, `<a>`, `<form>`, `<input>`) instead of divs with click handlers
+- Use `<button type="button">` for actions, `<button type="submit">` for form submissions
+- Use `<a href>` for navigation, not buttons with onClick navigation
+
+### Accessible Labels (MANDATORY)
+
+- Include `aria-label` for elements without visible text
+- Use proper `<label htmlFor="id">` elements for form inputs
+- Add `aria-describedby` for error messages linked to inputs
+
+### Stable Selectors (MANDATORY)
+
+- NEVER rely on auto-generated class names (CSS-in-JS hashes) as primary selectors
+- ALWAYS use `data-testid` for test targeting
+- Avoid using indexes or nth-child selectors
+
+### Loading & Error States (MANDATORY)
+
+- Add `data-loading="true|false"` attribute for async states
+- Use `data-testid="loading-{component}"` for loading indicators
+- Use `data-testid="error-{field}"` for validation/error messages
+- Use `data-testid="empty-{component}"` for empty states
+
+### Example Component:
+
+```tsx
+<form data-testid="form-login" onSubmit={handleSubmit}>
+  <div>
+    <label htmlFor="email">Email</label>
+    <input
+      id="email"
+      data-testid="input-email"
+      type="email"
+      aria-describedby="email-error"
+    />
+    {errors.email && (
+      <span id="email-error" data-testid="error-email" role="alert">
+        {errors.email}
+      </span>
+    )}
+  </div>
+  
+  <button
+    type="submit"
+    data-testid="btn-submit-login"
+    data-loading={isLoading}
+    disabled={isLoading}
+    aria-label="Submit login form"
+  >
+    {isLoading ? 'Signing in...' : 'Sign In'}
+  </button>
+</form>
+```
+
+### Self-Check for UI Automation:
+
+- [ ] All interactive elements have `data-testid`
+- [ ] Forms use semantic HTML elements
+- [ ] Inputs have associated labels
+- [ ] Loading states are indicated with `data-loading`
+- [ ] Error messages have `data-testid="error-*"`
+- [ ] No reliance on generated CSS classes for testing
+

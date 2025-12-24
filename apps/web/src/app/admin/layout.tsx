@@ -7,7 +7,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useMe } from '@/lib/api-client';
+import { useLogout, useMe } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@er/ui-components';
 import { useEffect } from 'react';
 
@@ -29,6 +30,16 @@ export default function AdminLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { data: user, isLoading } = useMe();
+  const logoutMutation = useLogout();
+
+  const handleLogout = async () => {
+    const refreshToken = useAuthStore.getState().refreshToken;
+    if (refreshToken) {
+      await logoutMutation.mutateAsync(refreshToken);
+    }
+    useAuthStore.getState().clearTokens();
+    router.push('/login');
+  };
 
   // Check if user is admin (basic check, will be enhanced with actual role check)
   useEffect(() => {
@@ -52,7 +63,7 @@ export default function AdminLayout({
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 border-r bg-white">
+      <aside className="w-64 border-r bg-white" data-testid="sidebar">
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="border-b p-6">
@@ -112,7 +123,7 @@ export default function AdminLayout({
       {/* Main Content */}
       <main className="flex-1">
         {/* Top Bar */}
-        <header className="border-b bg-white px-8 py-4">
+        <header className="border-b bg-white px-8 py-4" data-testid="header">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
@@ -126,6 +137,15 @@ export default function AdminLayout({
               <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                 System Online
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                data-testid="logout-button"
+                disabled={logoutMutation.isPending}
+              >
+                Logout
+              </Button>
             </div>
           </div>
         </header>
@@ -136,3 +156,4 @@ export default function AdminLayout({
     </div>
   );
 }
+

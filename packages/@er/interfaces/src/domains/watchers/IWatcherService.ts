@@ -38,7 +38,7 @@ export interface IEmailWatcherService {
    * Test watcher rules against recent emails.
    * @throws {NotFoundError} If watcher doesn't exist
    */
-  test(watcherId: string): Promise<TestResult>;
+  test(watcherId: string): Promise<WatcherTestResult>;
 }
 
 /**
@@ -81,7 +81,7 @@ export interface WatcherRule {
   matchTarget: 'subject' | 'from' | 'body';
 }
 
-export interface TestResult {
+export interface WatcherTestResult {
   success: boolean;
   matches: number;
   sampleMatches?: Array<{

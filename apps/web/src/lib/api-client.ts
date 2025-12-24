@@ -14,7 +14,11 @@ import { useAuthStore } from './auth-store';
  * This is safe to use in client components and hooks.
  */
 export const apiClient = createApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3801/v1',
+  baseUrl: (() => {
+    const raw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3801';
+    const trimmed = raw.replace(/\/$/, '');
+    return trimmed.endsWith('/v1') ? trimmed : `${trimmed}/v1`;
+  })(),
   getAccessToken: () => {
     if (typeof window === 'undefined') return null;
     return useAuthStore.getState().accessToken;
@@ -23,7 +27,7 @@ export const apiClient = createApiClient({
     if (typeof window === 'undefined') return null;
     return useAuthStore.getState().refreshToken;
   },
-  onTokenRefresh: (tokens) => {
+  onTokenRefresh: (tokens: { accessToken: string; refreshToken?: string }) => {
     if (typeof window === 'undefined') return;
     useAuthStore.getState().setTokens({
       accessToken: tokens.accessToken,
@@ -51,11 +55,15 @@ export const {
   useLogin,
   useRefresh,
   useLogout,
+  useUpdateProfile,
   useReminders,
   useReminder,
   useCreateReminder,
   useUpdateReminder,
   useDeleteReminder,
+  useSnoozeReminder,
+  useCompleteReminder,
+  useAcknowledgeReminder,
   useEscalationProfiles,
   useEscalationProfile,
   useCreateEscalationProfile,
@@ -89,5 +97,6 @@ export const {
   useAuditLog,
   useCreateSupportNote,
   useUpdateSupportNote,
+  useDeleteSupportNote,
 } = createApiHooks(apiClient);
 

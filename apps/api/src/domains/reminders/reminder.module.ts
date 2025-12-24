@@ -21,7 +21,12 @@ import { EscalationModule } from '../escalation/escalation.module';
     ReminderSnoozeService,
     ReminderCompletionService,
   ],
-  exports: [ReminderService, ReminderSnoozeService, ReminderCompletionService],
+  exports: [
+    ReminderService,
+    ReminderRepository,
+    ReminderSnoozeService,
+    ReminderCompletionService,
+  ],
 })
 export class ReminderModule {}
 

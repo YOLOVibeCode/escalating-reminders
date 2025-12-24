@@ -39,20 +39,19 @@ describe('NotificationRepository', () => {
         userId: 'user_123',
         reminderId: 'reminder_123',
         agentType: 'webhook',
-        escalationTier: 1,
+        tier: 1,
         status: 'PENDING',
-        payload: { title: 'Test', message: 'Test message' },
+        metadata: { title: 'Test', message: 'Test message' },
       };
 
       const mockNotification: NotificationLog = {
         id: 'notif_123',
         ...createData,
-        messageId: null,
+        escalationStateId: null,
+        sentAt: null,
         deliveredAt: null,
-        error: null,
-        retryCount: 0,
+        failureReason: null,
         createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
       mockPrismaService.notificationLog.create.mockResolvedValue(

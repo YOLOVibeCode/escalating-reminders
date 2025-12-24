@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -25,7 +25,10 @@ async function bootstrap(): Promise<void> {
   });
 
   // API prefix
-  app.setGlobalPrefix('v1');
+  // Keep a few top-level endpoints (like /health) outside the /v1 prefix for tooling/E2E.
+  app.setGlobalPrefix('v1', {
+    exclude: [{ path: 'health', method: RequestMethod.GET }],
+  });
 
   // Swagger documentation
   const config = new DocumentBuilder()

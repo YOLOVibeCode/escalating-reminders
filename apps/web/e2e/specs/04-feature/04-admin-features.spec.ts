@@ -37,15 +37,15 @@ test.describe('Layer 4: Admin Features CRUD', () => {
     await page.goto('/admin/users');
     await page.waitForLoadState('networkidle');
     
-    const editButton = page.locator('[data-testid="edit-button"], button:has-text("Edit")').first();
+    const editButton = page.locator('[data-testid^="edit-"]').first();
     if (await editButton.isVisible().catch(() => false)) {
       await editButton.click();
       
-      const tierSelect = page.locator('[data-testid="tier-select"], select[name="tier"]').first();
+      const tierSelect = page.locator('[data-testid="tier-select"]').first();
       if (await tierSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
         await tierSelect.selectOption('personal');
         
-        const saveButton = page.locator('button[type="submit"]').first();
+        const saveButton = page.locator('[data-testid="submit-button"]').first();
         await saveButton.click();
         
         await page.waitForTimeout(2000);

@@ -7,6 +7,8 @@
  *   import { Button, Input, DataTable, Dialog } from '@er/ui-components';
  */
 
+'use client';
+
 export * from './components/button';
 export * from './components/input';
 export * from './components/table';

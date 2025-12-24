@@ -23,6 +23,7 @@
     "db:push": "cd apps/api && npx prisma db push",
     "db:seed": "cd apps/api && npx prisma db seed",
     "db:studio": "cd apps/api && npx prisma studio",
+    "square:setup": "npx --yes tsx apps/api/src/scripts/square-setup.ts",
     "prepare": "husky install"
   },
   "devDependencies": {
@@ -30,8 +31,10 @@
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
     "prettier": "^3.1.0",
-    "turbo": "^1.11.0",
+    "square": "^40.0.0",
+    "dotenv": "^16.3.1",
     "tsx": "^4.6.0",
+    "turbo": "^1.11.0",
     "typescript": "^5.3.0"
   },
   "packageManager": "npm@10.2.0",
@@ -48,4 +51,3 @@
     ]
   }
 }
-

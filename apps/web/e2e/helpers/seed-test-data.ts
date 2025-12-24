@@ -1,4 +1,4 @@
-import { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 
 /**
  * Seed test data via API endpoint

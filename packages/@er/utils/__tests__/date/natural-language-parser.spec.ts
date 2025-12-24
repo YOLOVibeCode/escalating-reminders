@@ -16,7 +16,8 @@ describe('NaturalLanguageParser', () => {
         const result = parseNaturalLanguageDateTime('in 2 hours', referenceDate);
         expect(result.isValid).toBe(true);
         expect(result.confidence).toBe('high');
-        expect(result.date.getHours()).toBe(12);
+        // Reference is 10:00 UTC, adding 2 hours = 12:00 UTC
+        expect(result.date.getUTCHours()).toBe(12);
       });
 
       it('should parse "in 3 days"', () => {
@@ -101,6 +102,96 @@ describe('NaturalLanguageParser', () => {
         expect(result.isValid).toBe(true);
         expect(result.confidence).toBe('medium');
         expect(result.date.getDate()).toBe(22);
+      });
+    });
+
+    describe('"for X days" (spec format)', () => {
+      it('should parse "for 3 days"', () => {
+        const result = parseNaturalLanguageDateTime('for 3 days', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getDate()).toBe(18); // Jan 15 + 3 days = Jan 18
+      });
+
+      it('should parse "for 1 day"', () => {
+        const result = parseNaturalLanguageDateTime('for 1 day', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getDate()).toBe(16);
+      });
+
+      it('should parse "for 7 days"', () => {
+        const result = parseNaturalLanguageDateTime('for 7 days', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getDate()).toBe(22);
+      });
+    });
+
+    describe('"until [date]" (spec format)', () => {
+      it('should parse "until December 25th"', () => {
+        const result = parseNaturalLanguageDateTime('until December 25th', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getMonth()).toBe(11); // December (0-indexed)
+        expect(result.date.getDate()).toBe(25);
+        // Should be in 2024 (same year as reference)
+        expect(result.date.getFullYear()).toBe(2024);
+      });
+
+      it('should parse "until December 25" (without "th")', () => {
+        const result = parseNaturalLanguageDateTime('until December 25', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getMonth()).toBe(11);
+        expect(result.date.getDate()).toBe(25);
+      });
+
+      it('should parse "until January 1st"', () => {
+        const result = parseNaturalLanguageDateTime('until January 1st', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getMonth()).toBe(0); // January
+        expect(result.date.getDate()).toBe(1);
+        // Should be 2025 (next year since reference is Jan 15, 2024)
+        expect(result.date.getFullYear()).toBe(2025);
+      });
+
+      it('should parse "until 2024-12-25" (ISO format)', () => {
+        const result = parseNaturalLanguageDateTime('until 2024-12-25', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getFullYear()).toBe(2024);
+        expect(result.date.getMonth()).toBe(11);
+        expect(result.date.getDate()).toBe(25);
+      });
+    });
+
+    describe('"until [time] tomorrow" (spec format)', () => {
+      it('should parse "until 9am tomorrow"', () => {
+        const result = parseNaturalLanguageDateTime('until 9am tomorrow', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getDate()).toBe(16); // Tomorrow
+        expect(result.date.getHours()).toBe(9);
+        expect(result.date.getMinutes()).toBe(0);
+      });
+
+      it('should parse "until 3pm tomorrow"', () => {
+        const result = parseNaturalLanguageDateTime('until 3pm tomorrow', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getDate()).toBe(16);
+        expect(result.date.getHours()).toBe(15);
+      });
+    });
+
+    describe('"until next Friday" (spec format - already supported)', () => {
+      it('should parse "until next Friday"', () => {
+        const result = parseNaturalLanguageDateTime('until next Friday', referenceDate);
+        expect(result.isValid).toBe(true);
+        expect(result.confidence).toBe('high');
+        expect(result.date.getDay()).toBe(5); // Friday
       });
     });
 

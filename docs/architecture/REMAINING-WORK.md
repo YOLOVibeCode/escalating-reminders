@@ -2,7 +2,9 @@
 
 > **Role**: Software Architect  
 > **Date**: December 2024  
-> **Status**: Post-MVP Core Domains Complete
+> **Status**: ⚠️ Historical snapshot (many items below are now complete)
+
+> **Note (Dec 2025)**: This document predates the completed end-to-end notification delivery work (MailHog + webhook receiver), delivery policy enforcement, and the full green Playwright suite. For the current acceptance view, see `docs/E2E-SPECIFICATION-COVERAGE.md` and `docs/E2E-TEST-PYRAMID-PLAN.md`.
 
 ---
 

@@ -16,7 +16,9 @@ import { useQueryClient } from '@tanstack/react-query';
 export default function ProfileEditPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: user, isLoading } = useMe();
+  const meQuery = useMe() as unknown as { data?: any; isLoading: boolean };
+  const user = meQuery.data;
+  const isLoading = meQuery.isLoading;
   const updateProfileMutation = useUpdateProfile();
   const [displayName, setDisplayName] = useState('');
   const [timezone, setTimezone] = useState('');
@@ -34,10 +36,13 @@ export default function ProfileEditPage() {
     setError(null);
 
     try {
-      await updateProfileMutation.mutateAsync({
-        displayName: displayName.trim() || undefined,
-        timezone: timezone.trim() || undefined,
-      });
+      const payload: { displayName?: string; timezone?: string } = {};
+      const display = displayName.trim();
+      const tz = timezone.trim();
+      if (display) payload.displayName = display;
+      if (tz) payload.timezone = tz;
+
+      await updateProfileMutation.mutateAsync(payload);
       
       // Invalidate and refetch user data
       await queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -66,7 +71,7 @@ export default function ProfileEditPage() {
         <p className="mt-1 text-sm text-gray-600">Update your account information</p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} data-testid="profile-form">
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
@@ -74,7 +79,7 @@ export default function ProfileEditPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <div className="rounded-md bg-red-50 p-4">
+              <div className="rounded-md bg-red-50 p-4" data-testid="profile-error" role="alert">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
@@ -99,7 +104,9 @@ export default function ProfileEditPage() {
               </label>
               <Input
                 id="displayName"
+                name="displayName"
                 type="text"
+                data-testid="display-name-input"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="mt-1"
@@ -113,7 +120,9 @@ export default function ProfileEditPage() {
               </label>
               <Input
                 id="timezone"
+                name="timezone"
                 type="text"
+                data-testid="timezone-input"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
                 className="mt-1"
@@ -132,10 +141,11 @@ export default function ProfileEditPage() {
             variant="outline"
             onClick={() => router.back()}
             disabled={updateProfileMutation.isPending}
+            data-testid="cancel-button"
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={updateProfileMutation.isPending}>
+          <Button type="submit" disabled={updateProfileMutation.isPending} data-testid="save-button">
             {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>

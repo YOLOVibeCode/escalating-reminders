@@ -89,7 +89,7 @@ export default function EscalationProfilesPage() {
           </p>
         </div>
         <Link href="/settings/escalation-profiles/new">
-          <Button>Create Profile</Button>
+          <Button data-testid="create-profile-button">Create Profile</Button>
         </Link>
       </div>
 
@@ -114,15 +114,19 @@ export default function EscalationProfilesPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled
+                          data-testid={`edit-profile-${profile.id}-button`}
+                          asChild
                         >
-                          Edit
+                          <Link href={`/settings/escalation-profiles/${profile.id}/edit`}>
+                            Edit
+                          </Link>
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDelete(profile.id)}
                           disabled={deleteMutation.isPending}
+                          data-testid={`delete-profile-${profile.id}-button`}
                         >
                           Delete
                         </Button>

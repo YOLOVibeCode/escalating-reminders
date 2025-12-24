@@ -18,10 +18,10 @@ export default function HomePage(): JSX.Element {
         </p>
         <div className="flex justify-center gap-4">
           <Link href="/register">
-            <Button size="lg">Get Started</Button>
+            <Button size="lg" data-testid="home-get-started-button">Get Started</Button>
           </Link>
           <Link href="/login">
-            <Button variant="outline" size="lg">
+            <Button variant="outline" size="lg" data-testid="home-sign-in-button">
               Sign In
             </Button>
           </Link>

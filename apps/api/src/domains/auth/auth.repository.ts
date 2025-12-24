@@ -89,7 +89,7 @@ export class AuthRepository {
         userId,
         displayName: data.displayName || '',
         timezone: data.timezone || 'America/New_York',
-        preferences: data.preferences || {},
+        preferences: (data.preferences || {}) as any,
       },
     });
 
@@ -98,6 +98,44 @@ export class AuthRepository {
       timezone: profile.timezone,
       preferences: profile.preferences as Record<string, unknown>,
     };
+  }
+
+  /**
+   * Find user by OAuth provider and provider ID.
+   */
+  async findByOAuthProvider(
+    provider: string,
+    providerId: string,
+  ): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: {
+        oauthProvider_oauthProviderId: {
+          oauthProvider: provider as any,
+          oauthProviderId: providerId,
+        },
+      },
+    });
+  }
+
+  /**
+   * Update OAuth link on existing user.
+   */
+  async updateOAuthLink(
+    userId: string,
+    data: {
+      oauthProvider: string;
+      oauthProviderId: string;
+      emailVerified: boolean;
+    },
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        oauthProvider: data.oauthProvider as any,
+        oauthProviderId: data.oauthProviderId,
+        emailVerified: data.emailVerified,
+      },
+    });
   }
 
   // Session management can be implemented via cache or separate table

@@ -384,3 +384,4 @@ All documentation is available in `docs/`:
 ---
 
 **Congratulations! Your Super Admin Dashboard is ready to help you manage the Escalating Reminders platform efficiently!** 🎊
+

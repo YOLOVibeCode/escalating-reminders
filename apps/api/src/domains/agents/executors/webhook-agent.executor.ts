@@ -5,9 +5,10 @@ import type {
   AgentCommand,
   SendResult,
   CommandResult,
-  UserAgentSubscription,
-} from '@er/types';
+} from '@er/interfaces';
+import type { UserAgentSubscription } from '@er/types';
 import { generateWebhookSignature } from '@er/utils';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Webhook agent executor.
@@ -24,11 +25,13 @@ export class WebhookAgentExecutor implements IAgentExecutor {
   ): Promise<SendResult> {
     const config = subscription.configuration as {
       url?: string;
+      webhookUrl?: string;
       method?: string;
       headers?: Record<string, string>;
     };
 
-    if (!config?.url) {
+    const configuredUrl = config?.url || config?.webhookUrl;
+    if (!configuredUrl) {
       return {
         success: false,
         error: 'Webhook URL not configured',
@@ -36,11 +39,14 @@ export class WebhookAgentExecutor implements IAgentExecutor {
     }
 
     try {
-      const webhookUrl = config.url as string;
+      const webhookUrl = configuredUrl as string;
       const method = (config.method || 'POST').toUpperCase();
+      const requestId = randomUUID();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'User-Agent': 'EscalatingReminders/1.0',
+        'X-Request-Id': requestId,
+        'X-Notification-Id': payload.notificationId,
         ...(config.headers || {}),
       };
 
@@ -48,6 +54,7 @@ export class WebhookAgentExecutor implements IAgentExecutor {
       const body = {
         notificationId: payload.notificationId,
         reminderId: payload.reminderId,
+        userId: payload.userId,
         title: payload.title,
         message: payload.message,
         escalationTier: payload.escalationTier,

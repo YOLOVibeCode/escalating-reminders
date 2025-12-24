@@ -47,7 +47,13 @@ export class UserAgentSubscriptionRepository {
     webhookSecret?: string;
   }): Promise<UserAgentSubscription> {
     return this.prisma.userAgentSubscription.create({
-      data,
+      data: {
+        userId: data.userId,
+        agentDefinitionId: data.agentDefinitionId,
+        isEnabled: data.isEnabled,
+        configuration: data.configuration as any,
+        ...(data.webhookSecret ? { webhookSecret: data.webhookSecret } : {}),
+      },
       include: {
         agentDefinition: true,
       },
@@ -69,7 +75,13 @@ export class UserAgentSubscriptionRepository {
   ): Promise<UserAgentSubscription> {
     return this.prisma.userAgentSubscription.update({
       where: { id },
-      data,
+      data: {
+        ...(data.isEnabled !== undefined ? { isEnabled: data.isEnabled } : {}),
+        ...(data.configuration !== undefined ? { configuration: data.configuration as any } : {}),
+        ...(data.webhookSecret ? { webhookSecret: data.webhookSecret } : {}),
+        ...(data.lastTestedAt ? { lastTestedAt: data.lastTestedAt } : {}),
+        ...(data.lastTestResult ? { lastTestResult: data.lastTestResult } : {}),
+      },
       include: {
         agentDefinition: true,
       },

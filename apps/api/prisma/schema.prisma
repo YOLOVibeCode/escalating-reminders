@@ -18,13 +18,22 @@ datasource db {
 // USER DOMAIN
 // ============================================
 
+enum OAuthProvider {
+  GOOGLE
+  GITHUB
+  MICROSOFT
+}
+
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  emailVerified Boolean  @default(false) @map("email_verified")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id            String        @id @default(uuid())
+  email         String        @unique
+  passwordHash  String?       @map("password_hash") // Nullable for OAuth users
+  emailVerified Boolean        @default(false) @map("email_verified")
+  // OAuth fields
+  oauthProvider OAuthProvider? @map("oauth_provider")
+  oauthProviderId String?      @map("oauth_provider_id") // Provider's user ID
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   // Relations
   profile               UserProfile?
@@ -39,6 +48,7 @@ model User {
   adminUser             AdminUser?
 
   @@index([email])
+  @@unique([oauthProvider, oauthProviderId])
   @@map("users")
 }
 
@@ -188,6 +198,12 @@ enum SubscriptionStatus {
   TRIALING
 }
 
+enum DeliveryState {
+  ACTIVE
+  DELIVERY_DISABLED
+  USAGE_SUSPENDED
+}
+
 model Subscription {
   id                   String             @id @default(uuid())
   userId               String             @unique @map("user_id")
@@ -198,6 +214,13 @@ model Subscription {
   currentPeriodStart   DateTime           @default(now()) @map("current_period_start")
   currentPeriodEnd     DateTime?          @map("current_period_end")
   cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  deliveryState        DeliveryState      @default(ACTIVE) @map("delivery_state")
+  deliveryDisabledAt   DateTime?          @map("delivery_disabled_at")
+  deliveryDisabledBy   String?            @map("delivery_disabled_by")
+  deliveryDisabledReason String?          @map("delivery_disabled_reason")
+  usageSuspendedAt     DateTime?          @map("usage_suspended_at")
+  usageSuspendedUntil  DateTime?          @map("usage_suspended_until")
+  usageSuspensionReason String?           @map("usage_suspension_reason")
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
@@ -207,6 +230,19 @@ model Subscription {
 
   @@index([squareSubscriptionId])
   @@map("subscriptions")
+}
+
+model DeliveryWindowUsage {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  windowStart DateTime @map("window_start")
+  usedCount  Int      @default(0) @map("used_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, windowStart])
+  @@index([userId, windowStart])
+  @@map("delivery_window_usage")
 }
 
 model PaymentHistory {

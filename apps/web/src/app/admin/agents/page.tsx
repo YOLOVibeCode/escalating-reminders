@@ -5,13 +5,7 @@
 
 'use client';
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  Badge,
-} from '@er/ui-components';
+import { Card, CardHeader, CardTitle, CardContent, Badge } from '@er/ui-components';
 import { useAgentStats } from '@/lib/api-client';
 
 export default function AdminAgentsPage() {
@@ -25,102 +19,71 @@ export default function AdminAgentsPage() {
     return <div className="py-8 text-center">No agent data available</div>;
   }
 
-  const formatPercent = (value: number) => {
-    return `${(value * 100).toFixed(1)}%`;
-  };
-
-  const formatTime = (ms: number) => {
-    return `${(ms / 1000).toFixed(2)}s`;
-  };
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+  const formatMs = (ms: number) => `${(ms / 1000).toFixed(2)}s`;
 
   return (
     <div className="space-y-6">
-      {/* Agent Stats */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Total Agents
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">Total Agents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{agentStats.total}</div>
+            <div className="text-3xl font-bold">{agentStats.totalAgents}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Active Agents
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">Active Agents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{agentStats.active}</div>
+            <div className="text-3xl font-bold">{agentStats.activeAgents}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Success Rate
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">Total Subscriptions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {formatPercent(agentStats.successRate)}
-            </div>
-            <Badge
-              variant={
-                agentStats.successRate > 0.95
-                  ? 'success'
-                  : agentStats.successRate > 0.85
-                  ? 'warning'
-                  : 'danger'
-              }
-            >
-              {agentStats.successRate > 0.95
-                ? 'Excellent'
-                : agentStats.successRate > 0.85
-                ? 'Good'
-                : 'Needs Attention'}
-            </Badge>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Avg Execution Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatTime(agentStats.averageExecutionTime)}
-            </div>
+            <div className="text-3xl font-bold">{agentStats.totalSubscriptions}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Agent Types */}
       <Card>
         <CardHeader>
-          <CardTitle>Agents by Type</CardTitle>
+          <CardTitle>By Agent Type</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <span className="font-medium">Webhook</span>
-              <Badge variant="default">{agentStats.byType.WEBHOOK}</Badge>
-            </div>
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <span className="font-medium">Slack</span>
-              <Badge variant="default">{agentStats.byType.SLACK}</Badge>
-            </div>
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <span className="font-medium">Email</span>
-              <Badge variant="default">{agentStats.byType.EMAIL}</Badge>
-            </div>
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <span className="font-medium">SMS</span>
-              <Badge variant="default">{agentStats.byType.SMS}</Badge>
-            </div>
+          <div className="space-y-3">
+            {Object.entries(agentStats.byAgentType).map(([agentType, stats]) => (
+              <div key={agentType} className="rounded-md border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">{agentType}</p>
+                    <p className="text-xs text-gray-500">Subscriptions: {stats.subscriptions}</p>
+                  </div>
+                  <Badge variant={stats.successRate > 95 ? 'success' : stats.successRate > 85 ? 'warning' : 'danger'}>
+                    Success: {formatPercent(stats.successRate)}
+                  </Badge>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm md:grid-cols-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Sent</span>
+                    <span className="font-semibold">{stats.notificationsSent}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Error rate</span>
+                    <span className="font-semibold">{formatPercent(stats.errorRate)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Avg delivery</span>
+                    <span className="font-semibold">{formatMs(stats.averageDeliveryTime)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

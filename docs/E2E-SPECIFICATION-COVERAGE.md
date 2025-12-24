@@ -1,7 +1,7 @@
 # E2E Test Specification Coverage
 
 > **Version**: 1.0.0  
-> **Last Updated**: December 2024  
+> **Last Updated**: December 2025  
 > **Status**: ✅ Complete
 
 ---
@@ -46,6 +46,10 @@ npm run e2e:production
 | Invalid login shows error | `01-06` | `01-auth.spec.ts` | ✅ |
 | Token refresh works | `01-07` | `01-auth.spec.ts` | ✅ |
 | Protected routes redirect to login | `01-08` | `01-auth.spec.ts` | ✅ |
+| OAuth login button visible | `01-09` | `01-auth.spec.ts` | ✅ |
+| OAuth login redirects to provider | `01-10` | `01-auth.spec.ts` | ✅ |
+| OAuth callback handles tokens | `01-11` | `01-auth.spec.ts` | ✅ |
+| OAuth callback handles errors | `01-12` | `01-auth.spec.ts` | ✅ |
 
 ### 2. Reminder Management
 
@@ -55,7 +59,11 @@ npm run e2e:production
 | User can view reminder details | `04-02` | `04-reminders.spec.ts` | ✅ |
 | User can update reminder | `04-03` | `04-reminders.spec.ts` | ✅ |
 | User can delete reminder | `04-04` | `04-reminders.spec.ts` | ✅ |
-| User can snooze reminder | `04-05` | `04-reminders.spec.ts` | ✅ |
+| User can snooze reminder (basic) | `04-05` | `04-reminders.spec.ts` | ✅ |
+| User can snooze reminder - "for 3 days" format | `04-05a` | `04-reminders.spec.ts` | ✅ |
+| User can snooze reminder - "until next Friday" format | `04-05b` | `04-reminders.spec.ts` | ✅ |
+| User can snooze reminder - "until 9am tomorrow" format | `04-05c` | `04-reminders.spec.ts` | ✅ |
+| User can snooze reminder - "until December 25th" format | `04-05d` | `04-reminders.spec.ts` | ✅ |
 | User can complete reminder | `04-06` | `04-reminders.spec.ts` | ✅ |
 | User can filter reminders | `04-17` | `04-reminders.spec.ts` | ✅ |
 | User can sort reminders | `04-18` | `04-reminders.spec.ts` | ✅ |
@@ -153,6 +161,9 @@ npm run e2e:production
 | Escalation flow | `05-03` | Create → trigger → escalate → notify | ✅ |
 | Webhook delivery | `05-04` | Agent webhook fires on trigger | ✅ |
 | Full lifecycle | `05-05` | Create → snooze → complete reminder | ✅ |
+| Email delivery | `05-06` | Email notification delivered (MailHog) | ✅ |
+| Delivery disabled | `05-07` | Delivery disabled blocks outbound sends | ✅ |
+| Usage suspended | `05-08` | Usage suspension throttles per 3-day window | ✅ |
 
 ---
 
@@ -189,7 +200,7 @@ These features from `SPECIFICATION.md` are planned for future phases:
 |---------|--------|-------|
 | Calendar Integration | 🔜 Future | Phase 2 |
 | Social Escalation (trusted contacts) | 🔜 Future | Phase 2 |
-| Natural Language Snooze | 🔜 Future | Phase 1 |
+| Natural Language Snooze (NLP parsing) | ✅ Complete | Phase 1 |
 | Email Watcher Setup | 🔜 Future | Phase 2 |
 | Square Billing Integration | 🔜 Future | Phase 1 |
 | Agent SDK Testing | 🔜 Future | Phase 3 |
@@ -202,13 +213,13 @@ These features from `SPECIFICATION.md` are planned for future phases:
 | Layer | Tests | Coverage |
 |-------|-------|----------|
 | Layer 0 (Critical) | 4 | App loads, login, API health |
-| Layer 1 (Auth) | 8 | All auth flows |
+| Layer 1 (Auth) | 12 | All auth flows including OAuth |
 | Layer 2 (Dashboard) | 37 | All pages render |
 | Layer 3 (Navigation) | 40 | All navigation works |
-| Layer 4 (Features) | 30 | All CRUD operations |
-| Layer 5 (Integration) | 5 | Cross-role workflows |
+| Layer 4 (Features) | 34 | All CRUD operations |
+| Layer 5 (Integration) | 8 | Cross-role workflows |
 | Layer 6 (Error) | 6 | Error handling |
-| **Total** | **130** | **Core functionality** |
+| **Total** | **142** | **Core functionality** |
 
 ---
 

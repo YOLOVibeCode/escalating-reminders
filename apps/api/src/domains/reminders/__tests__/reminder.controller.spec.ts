@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReminderController } from '../reminder.controller';
 import { ReminderService } from '../reminder.service';
+import { ReminderSnoozeService } from '../reminder-snooze.service';
+import { ReminderCompletionService } from '../reminder-completion.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import type {
   Reminder,
@@ -22,8 +24,18 @@ describe('ReminderController', () => {
     delete: jest.fn(),
   };
 
+  const mockReminderSnoozeService = {
+    snooze: jest.fn(),
+    unsnooze: jest.fn(),
+  };
+
+  const mockReminderCompletionService = {
+    complete: jest.fn(),
+    reopen: jest.fn(),
+  };
+
   const mockUser = {
-    id: 'user_123',
+    sub: 'user_123',
     email: 'test@example.com',
   };
 
@@ -38,6 +50,14 @@ describe('ReminderController', () => {
         {
           provide: ReminderService,
           useValue: mockReminderService,
+        },
+        {
+          provide: ReminderSnoozeService,
+          useValue: mockReminderSnoozeService,
+        },
+        {
+          provide: ReminderCompletionService,
+          useValue: mockReminderCompletionService,
         },
       ],
     })

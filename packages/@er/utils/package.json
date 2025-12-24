@@ -15,8 +15,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@er/constants": "workspace:*",
-    "@er/types": "workspace:*"
+    "@er/constants": "file:../constants",
+    "@er/types": "file:../types"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

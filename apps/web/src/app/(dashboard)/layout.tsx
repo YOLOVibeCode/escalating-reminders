@@ -7,10 +7,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useLogout, useMe } from '@/lib/api-client';
+import { useLogout, useMe, useReminders } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button } from '@er/ui-components';
 import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -20,6 +21,8 @@ const navigation = [
   { name: 'Settings', href: '/settings' },
 ];
 
+const ONBOARDING_DONE_KEY = 'er_onboarding_completed_v1';
+
 export default function DashboardLayout({
   children,
 }: {
@@ -27,8 +30,36 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: user } = useMe();
+  const meQuery = useMe() as unknown as { data?: any };
+  const user = meQuery.data;
   const logoutMutation = useLogout();
+  const remindersQuery = useReminders({ page: 1, pageSize: 1 });
+  const [onboardingDone, setOnboardingDone] = useState<boolean>(true);
+
+  const shouldAutoRedirectToOnboarding = useMemo(() => {
+    if (onboardingDone) return false;
+    // Avoid redirect loops on onboarding and reminder creation screens.
+    if (pathname === '/onboarding') return false;
+    if (pathname === '/reminders/new') return false;
+    // If reminders haven't loaded yet, don't redirect.
+    if (!remindersQuery.data) return false;
+    return (remindersQuery.data.pagination?.totalItems || 0) === 0;
+  }, [onboardingDone, pathname, remindersQuery.data]);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(ONBOARDING_DONE_KEY);
+      setOnboardingDone(stored === 'true');
+    } catch {
+      setOnboardingDone(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (shouldAutoRedirectToOnboarding) {
+      router.replace('/onboarding');
+    }
+  }, [router, shouldAutoRedirectToOnboarding]);
 
   const handleLogout = async () => {
     const refreshToken = useAuthStore.getState().refreshToken;
@@ -42,7 +73,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <nav className="border-b bg-white">
+      <nav className="border-b bg-white" data-testid="header">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center">
@@ -56,6 +87,7 @@ export default function DashboardLayout({
                     <Link
                       key={item.name}
                       href={item.href}
+                      data-testid={`nav-${item.name.toLowerCase()}-link`}
                       className={`rounded-md px-3 py-2 text-sm font-medium ${
                         isActive
                           ? 'bg-gray-100 text-gray-900'
@@ -72,7 +104,7 @@ export default function DashboardLayout({
               {user?.profile?.displayName && (
                 <span className="text-sm text-gray-600">{user.profile.displayName}</span>
               )}
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <Button variant="outline" size="sm" onClick={handleLogout} data-testid="logout-button">
                 Logout
               </Button>
             </div>

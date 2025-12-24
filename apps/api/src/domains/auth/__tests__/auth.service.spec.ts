@@ -110,23 +110,32 @@ describe('AuthService', () => {
         email: createUserDto.email,
       });
 
-      await expect(service.register(createUserDto)).rejects.toThrow(
-        ERROR_CODES.RESOURCE_ALREADY_EXISTS,
-      );
+      await expect(service.register(createUserDto)).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: ERROR_CODES.RESOURCE_ALREADY_EXISTS,
+        }),
+      });
     });
 
     it('should hash password before storing', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'user_123',
+          email: createUserDto.email,
+          subscription: { tier: 'FREE' },
+        });
       mockPrismaService.user.create.mockResolvedValue({
         id: 'user_123',
         email: createUserDto.email,
       });
+      mockJwtService.sign.mockReturnValue('mock-token');
 
       await service.register(createUserDto);
 
       const createCall = mockPrismaService.user.create.mock.calls[0][0];
-      expect(createCall.data.password).not.toBe(createUserDto.password);
-      expect(createCall.data.password).toHaveLength(60); // bcrypt hash length
+      expect(createCall.data.passwordHash).not.toBe(createUserDto.password);
+      expect(createCall.data.passwordHash).toHaveLength(60); // bcrypt hash length
     });
   });
 
@@ -170,18 +179,22 @@ describe('AuthService', () => {
     it('should throw error if user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.login(loginDto)).rejects.toThrow(
-        ERROR_CODES.AUTH_INVALID_CREDENTIALS,
-      );
+      await expect(service.login(loginDto)).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        }),
+      });
     });
 
     it('should throw error if password is incorrect', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       jest.spyOn(require('bcrypt'), 'compare').mockResolvedValue(false);
 
-      await expect(service.login(loginDto)).rejects.toThrow(
-        ERROR_CODES.AUTH_INVALID_CREDENTIALS,
-      );
+      await expect(service.login(loginDto)).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        }),
+      });
     });
   });
 
@@ -212,9 +225,11 @@ describe('AuthService', () => {
         throw new Error('Invalid token');
       });
 
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
-        ERROR_CODES.AUTH_TOKEN_INVALID,
-      );
+      await expect(service.refreshToken('invalid-token')).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: ERROR_CODES.AUTH_TOKEN_INVALID,
+        }),
+      });
     });
 
     it('should throw error if user not found', async () => {
@@ -224,9 +239,11 @@ describe('AuthService', () => {
       });
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.refreshToken('valid-refresh-token')).rejects.toThrow(
-        ERROR_CODES.AUTH_TOKEN_INVALID,
-      );
+      await expect(service.refreshToken('valid-refresh-token')).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: ERROR_CODES.AUTH_TOKEN_INVALID,
+        }),
+      });
     });
   });
 

@@ -111,7 +111,7 @@ function validateSchedule(schedule: CreateScheduleDto | undefined): ValidationEr
   }
 
   // Validate cron expression if schedule type is CRON
-  if (schedule.type === 'CRON' && (!schedule.cronExpression || schedule.cronExpression.trim().length === 0)) {
+  if ((schedule.type as any) === 'CRON' && (!schedule.cronExpression || schedule.cronExpression.trim().length === 0)) {
     return {
       field: 'schedule.cronExpression',
       message: 'Cron expression is required for CRON schedule type',

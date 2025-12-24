@@ -7,11 +7,11 @@ import type {
   LoginResponse,
   RefreshRequest,
   RefreshResponse,
+  OAuthAuthorizationUrlResponse,
   RemindersResponse,
   ReminderResponse,
   CreateReminderRequest,
   UpdateReminderRequest,
-  ReminderFilters,
   EscalationProfilesResponse,
   EscalationProfileResponse,
   CreateEscalationProfileRequest,
@@ -23,6 +23,7 @@ import type {
   UpdateAgentSubscriptionRequest,
   TestResultResponse,
 } from './types';
+import type { ReminderFilters, User } from '@er/types';
 
 /**
  * API client configuration.
@@ -56,13 +57,13 @@ export class ApiClient {
     const url = `${this.config.baseUrl}${endpoint}`;
     const accessToken = this.config.getAccessToken?.();
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string> | undefined),
     };
 
     if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
+      headers.Authorization = `Bearer ${accessToken}`;
     }
 
     let response: Response;
@@ -84,7 +85,7 @@ export class ApiClient {
         // Retry request with new token
         const newAccessToken = this.config.getAccessToken?.();
         if (newAccessToken) {
-          headers['Authorization'] = `Bearer ${newAccessToken}`;
+          headers.Authorization = `Bearer ${newAccessToken}`;
           response = await fetch(url, {
             ...options,
             headers,
@@ -100,14 +101,27 @@ export class ApiClient {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      // Support both wrapped and unwrapped error shapes.
       const error = data as ApiErrorResponse;
-      throw new Error(
-        error.error?.message || `API error: ${response.status} ${response.statusText}`,
-      );
+      const message =
+        (error as any)?.error?.message ||
+        (typeof (data as any)?.message === 'string' ? (data as any).message : null) ||
+        `API error: ${response.status} ${response.statusText}`;
+      throw new Error(message);
     }
 
-    const apiResponse = data as ApiResponse<T>;
-    return apiResponse.data;
+    // Support both wrapped and unwrapped success shapes.
+    // Preferred (standard) shape: { success: true, data: ... }
+    if (
+      typeof (data as any)?.success === 'boolean' &&
+      (data as any)?.success === true &&
+      'data' in (data as any)
+    ) {
+      return (data as ApiResponse<T>).data;
+    }
+
+    // Fallback: raw response is the data.
+    return data as T;
   }
 
   /**
@@ -172,6 +186,19 @@ export class ApiClient {
   }
 
   /**
+   * Get OAuth authorization URL.
+   */
+  async getOAuthAuthorizationUrl(
+    provider: string,
+    redirectUri: string,
+  ): Promise<OAuthAuthorizationUrlResponse> {
+    const response = await this.request<ApiResponse<OAuthAuthorizationUrlResponse>>(
+      `/auth/oauth/${provider}/authorize?redirectUri=${encodeURIComponent(redirectUri)}`,
+    );
+    return response.data;
+  }
+
+  /**
    * Generic PATCH request.
    */
   async patch<T = any>(endpoint: string, data: any): Promise<T> {
@@ -182,12 +209,23 @@ export class ApiClient {
   }
 
   /**
+   * Generic DELETE request.
+   * Optionally supports a JSON request body.
+   */
+  async delete<T = any>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      body: data ? JSON.stringify(data) : null,
+    });
+  }
+
+  /**
    * Generic POST request.
    */
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data ? JSON.stringify(data) : null,
     });
   }
 

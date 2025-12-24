@@ -153,12 +153,16 @@ export default defineConfig({
   },
   
   // Web server configuration for local development only
-  webServer: (IS_CI || IS_PRODUCTION) ? undefined : {
-    command: 'npm run dev',
-    url: BASE_URL,
-    reuseExistingServer: true,
-    timeout: 120000,
-  },
+  ...(IS_CI || IS_PRODUCTION
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev',
+          url: BASE_URL,
+          reuseExistingServer: true,
+          timeout: 120000,
+        },
+      }),
 });
 
 // Export environment config for use in tests

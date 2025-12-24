@@ -16,7 +16,7 @@ export default function AgentsPage() {
   const { data: agents, isLoading: agentsLoading } = useAgents();
   const { data: subscriptions } = useAgentSubscriptions();
 
-  const subscribedAgentIds = new Set(subscriptions?.map((sub) => sub.agentType) || []);
+  const subscribedAgentTypes = new Set(subscriptions?.map((sub: any) => sub.agentDefinition?.type) || []);
 
   if (agentsLoading) {
     return (
@@ -26,8 +26,8 @@ export default function AgentsPage() {
     );
   }
 
-  const subscribedAgents = agents?.filter((agent) => subscribedAgentIds.has(agent.type)) || [];
-  const availableAgents = agents?.filter((agent) => !subscribedAgentIds.has(agent.type)) || [];
+  const subscribedAgents = agents?.filter((agent) => subscribedAgentTypes.has(agent.type)) || [];
+  const availableAgents = agents?.filter((agent) => !subscribedAgentTypes.has(agent.type)) || [];
 
   return (
     <div className="container mx-auto space-y-6 p-6">
@@ -82,6 +82,7 @@ interface AgentCardProps {
 }
 
 function AgentCard({ agent, isSubscribed }: AgentCardProps) {
+  const capabilities = (agent.capabilities || {}) as any;
   return (
     <Card>
       <CardHeader>
@@ -106,17 +107,17 @@ function AgentCard({ agent, isSubscribed }: AgentCardProps) {
             <div>
               <p className="text-xs font-medium text-gray-700">Capabilities</p>
               <div className="mt-1 flex flex-wrap gap-1">
-                {agent.capabilities.canPush && (
+                {capabilities.canPush && (
                   <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-800">
                     Push
                   </span>
                 )}
-                {agent.capabilities.canPull && (
+                {capabilities.canPull && (
                   <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
                     Pull
                   </span>
                 )}
-                {agent.capabilities.canReceiveCommands && (
+                {capabilities.canReceiveCommands && (
                   <span className="rounded bg-purple-100 px-2 py-0.5 text-xs text-purple-800">
                     Commands
                   </span>
@@ -128,13 +129,13 @@ function AgentCard({ agent, isSubscribed }: AgentCardProps) {
           <div className="pt-2">
             {isSubscribed ? (
               <Link href={`/agents/${agent.type}/configure`}>
-                <Button className="w-full" variant="outline">
+                <Button className="w-full" variant="outline" data-testid={`configure-agent-${agent.type}-button`}>
                   Configure
                 </Button>
               </Link>
             ) : (
               <Link href={`/agents/${agent.type}/configure`}>
-                <Button className="w-full">Subscribe</Button>
+                <Button className="w-full" data-testid={`subscribe-agent-${agent.type}-button`}>Subscribe</Button>
               </Link>
             )}
           </div>

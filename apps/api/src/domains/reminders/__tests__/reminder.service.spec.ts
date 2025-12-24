@@ -3,6 +3,11 @@ import { ReminderService } from '../reminder.service';
 import { ReminderRepository } from '../reminder.repository';
 import { AuthRepository } from '../../auth/auth.repository';
 import { SUBSCRIPTION_TIERS } from '@er/constants';
+import {
+  QuotaExceededError,
+} from '../../../common/exceptions/quota-exceeded.exception';
+import { NotFoundError } from '../../../common/exceptions/not-found.exception';
+import { ForbiddenError } from '../../../common/exceptions/forbidden.exception';
 import type {
   Reminder,
   CreateReminderDto,
@@ -115,7 +120,7 @@ describe('ReminderService', () => {
       mockReminderRepository.countByUser.mockResolvedValue(3); // At limit
 
       await expect(service.create('user_123', createDto)).rejects.toThrow(
-        'QuotaExceededError',
+        QuotaExceededError,
       );
     });
 
@@ -209,7 +214,7 @@ describe('ReminderService', () => {
 
       await expect(
         service.findById('user_123', 'nonexistent'),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ForbiddenError when user does not own reminder', async () => {
@@ -221,7 +226,7 @@ describe('ReminderService', () => {
 
       await expect(
         service.findById('user_123', 'reminder_123'),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -375,7 +380,7 @@ describe('ReminderService', () => {
 
       await expect(
         service.update('user_123', 'nonexistent', updateDto),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ForbiddenError when user does not own reminder', async () => {
@@ -387,7 +392,7 @@ describe('ReminderService', () => {
 
       await expect(
         service.update('user_123', 'reminder_123', updateDto),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
 
     it('should validate DTO', async () => {
@@ -463,7 +468,7 @@ describe('ReminderService', () => {
 
       await expect(
         service.delete('user_123', 'nonexistent'),
-      ).rejects.toThrow('NotFoundError');
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ForbiddenError when user does not own reminder', async () => {
@@ -475,7 +480,7 @@ describe('ReminderService', () => {
 
       await expect(
         service.delete('user_123', 'reminder_123'),
-      ).rejects.toThrow('ForbiddenError');
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 });

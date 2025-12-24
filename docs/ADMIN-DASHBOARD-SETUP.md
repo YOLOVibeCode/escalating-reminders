@@ -377,3 +377,4 @@ All endpoints require:
 **The Super Admin Dashboard is ready for production use!**
 
 For questions or issues, refer to the architecture docs in `docs/architecture/`.
+

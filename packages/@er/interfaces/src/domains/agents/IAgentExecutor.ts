@@ -1,10 +1,5 @@
-import type {
-  NotificationPayload,
-  AgentCommand,
-  SendResult,
-  CommandResult,
-  UserAgentSubscription,
-} from '@er/types';
+import type { UserAgentSubscription } from '@er/types';
+import type { NotificationPayload, AgentCommand, SendResult, CommandResult } from './IAgentService';
 
 /**
  * Interface for agent executors.

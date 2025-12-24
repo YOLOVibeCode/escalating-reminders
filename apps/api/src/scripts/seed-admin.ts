@@ -1,62 +1,111 @@
 /**
- * Database Seed Script for Admin Users
- * 
- * This script creates an initial admin user with SUPER_ADMIN role.
- * 
+ * Seed an initial admin user.
+ *
  * Usage:
- *   npm run db:seed -- --email=admin@example.com
- *   npm run db:seed -- --email=admin@example.com --role=SUPPORT_ADMIN
+ *   npm run db:seed-admin -- --email=admin@example.com
+ *   npm run db:seed-admin -- --email=admin@example.com --role=SUPPORT_ADMIN
+ *   npm run db:seed-admin -- --email=admin@example.com --password=AdminPass123!
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AdminRole, SubscriptionTier, SubscriptionStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+function getArg(name: string): string | undefined {
+  const arg = process.argv.slice(2).find((a) => a.startsWith(`--${name}=`));
+  return arg ? arg.split('=')[1] : undefined;
+}
+
+function requireArg(name: string): string {
+  const value = getArg(name);
+  if (!value) {
+    // eslint-disable-next-line no-console
+    console.error(`❌ Error: --${name} argument is required`);
+    process.exit(1);
+  }
+  return value;
+}
+
+function getDefaultPermissions(role: AdminRole): Record<string, unknown> {
+  switch (role) {
+    case AdminRole.SUPER_ADMIN:
+      return { all: true };
+    case AdminRole.SUPPORT_ADMIN:
+      return {
+        viewUsers: true,
+        viewBilling: true,
+        viewSystem: true,
+        manageSupportNotes: true,
+      };
+    case AdminRole.BILLING_ADMIN:
+      return {
+        viewUsers: true,
+        viewBilling: true,
+        manageBilling: true,
+        processRefunds: true,
+      };
+    case AdminRole.READONLY_ADMIN:
+      return {
+        viewUsers: true,
+        viewBilling: true,
+        viewSystem: true,
+        viewReminders: true,
+      };
+  }
+}
+
 async function main() {
-  // Parse command line arguments
-  const args = process.argv.slice(2);
-  const emailArg = args.find((arg) => arg.startsWith('--email='));
-  const roleArg = args.find((arg) => arg.startsWith('--role='));
+  const email = requireArg('email');
 
-  if (!emailArg) {
-    console.error('❌ Error: --email argument is required');
-    console.log('Usage: npm run db:seed -- --email=admin@example.com [--role=SUPER_ADMIN]');
-    process.exit(1);
+  const roleStr = getArg('role') || AdminRole.SUPER_ADMIN;
+  const password = getArg('password') || 'AdminPass123!';
+  const tierStr = getArg('tier') || SubscriptionTier.PRO;
+
+  if (!Object.values(AdminRole).includes(roleStr as AdminRole)) {
+    throw new Error(`Invalid --role. Must be one of: ${Object.values(AdminRole).join(', ')}`);
   }
 
-  const email = emailArg.split('=')[1];
-  const role = roleArg ? roleArg.split('=')[1] : 'SUPER_ADMIN';
-
-  // Validate role
-  const validRoles = ['SUPER_ADMIN', 'SUPPORT_ADMIN', 'BILLING_ADMIN', 'READONLY_ADMIN'];
-  if (!validRoles.includes(role)) {
-    console.error(`❌ Error: Invalid role. Must be one of: ${validRoles.join(', ')}`);
-    process.exit(1);
+  if (!Object.values(SubscriptionTier).includes(tierStr as SubscriptionTier)) {
+    throw new Error(`Invalid --tier. Must be one of: ${Object.values(SubscriptionTier).join(', ')}`);
   }
 
-  console.log('🌱 Starting admin user seed...\n');
-  console.log(`Email: ${email}`);
-  console.log(`Role: ${role}\n`);
+  const role = roleStr as AdminRole;
+  const tier = tierStr as SubscriptionTier;
 
-  try {
-    // Check if user already exists
-    let user = await prisma.user.findUnique({
-      where: { email },
-      include: { adminUser: true },
-    });
+  // eslint-disable-next-line no-console
+  console.log('🌱 Seeding admin user');
+  // eslint-disable-next-line no-console
+  console.log(`   Email: ${email}`);
+  // eslint-disable-next-line no-console
+  console.log(`   Role:  ${role}`);
+  // eslint-disable-next-line no-console
+  console.log(`   Tier:  ${tier}`);
 
-    if (!user) {
-      // Create new user
-      console.log('👤 Creating new user...');
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+  // Create or update user
+  const existing = await prisma.user.findUnique({
+    where: { email },
+    include: { adminUser: true, profile: true, subscription: true },
+  });
 
-      user = await prisma.user.create({
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const user = existing
+    ? await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          passwordHash,
+          emailVerified: true,
+          profile: existing.profile
+            ? { update: { displayName: existing.profile.displayName || 'Admin User', timezone: existing.profile.timezone || 'UTC' } }
+            : { create: { displayName: 'Admin User', timezone: 'UTC' } },
+        },
+        include: { adminUser: true, profile: true, subscription: true },
+      })
+    : await prisma.user.create({
         data: {
           email,
-          passwordHash: hashedPassword,
-          tier: 'ENTERPRISE',
-          status: 'ACTIVE',
+          passwordHash,
           emailVerified: true,
           profile: {
             create: {
@@ -64,104 +113,63 @@ async function main() {
               timezone: 'UTC',
             },
           },
+          subscription: {
+            create: {
+              tier,
+              status: SubscriptionStatus.ACTIVE,
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+            },
+          },
         },
-        include: { adminUser: true },
+        include: { adminUser: true, profile: true, subscription: true },
       });
 
-      console.log('✅ User created successfully');
-    } else {
-      console.log('ℹ️  User already exists');
-    }
-
-    // Check if admin user already exists
-    if (user.adminUser) {
-      console.log('ℹ️  Admin user already exists with role:', user.adminUser.role);
-      
-      // Update role if different
-      if (user.adminUser.role !== role) {
-        console.log(`🔄 Updating admin role from ${user.adminUser.role} to ${role}...`);
-        await prisma.adminUser.update({
-          where: { id: user.adminUser.id },
-          data: { role },
-        });
-        console.log('✅ Admin role updated');
-      }
-    } else {
-      // Create admin user
-      console.log('🔐 Creating admin user...');
-      await prisma.adminUser.create({
-        data: {
-          userId: user.id,
-          role,
-          permissions: getDefaultPermissions(role),
-        },
-      });
-      console.log('✅ Admin user created successfully');
-    }
-
-    // Create initial subscription if needed
-    const existingSubscription = await prisma.subscription.findFirst({
-      where: { userId: user.id, status: 'ACTIVE' },
+  // Ensure subscription exists
+  if (!user.subscription) {
+    await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        tier,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      },
     });
-
-    if (!existingSubscription) {
-      console.log('💳 Creating subscription...');
-      await prisma.subscription.create({
-        data: {
-          userId: user.id,
-          plan: 'ENTERPRISE',
-          status: 'ACTIVE',
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-        },
-      });
-      console.log('✅ Subscription created');
-    }
-
-    console.log('\n🎉 Admin user setup complete!');
-    console.log('\n📝 Login credentials:');
-    console.log(`Email: ${email}`);
-    console.log(`Password: admin123`);
-    console.log(`Role: ${role}`);
-    console.log('\n⚠️  IMPORTANT: Change the password after first login!\n');
-  } catch (error) {
-    console.error('❌ Error creating admin user:', error);
-    process.exit(1);
-  } finally {
-    await prisma.$disconnect();
   }
-}
 
-function getDefaultPermissions(role: string): object {
-  const permissions: Record<string, any> = {
-    SUPER_ADMIN: {
-      all: true,
-    },
-    SUPPORT_ADMIN: {
-      viewUsers: true,
-      viewBilling: true,
-      viewSystem: true,
-      manageSupportNotes: true,
-    },
-    BILLING_ADMIN: {
-      viewUsers: true,
-      viewBilling: true,
-      manageBilling: true,
-      processRefunds: true,
-    },
-    READONLY_ADMIN: {
-      viewUsers: true,
-      viewBilling: true,
-      viewSystem: true,
-      viewReminders: true,
-    },
-  };
+  // Ensure admin user exists
+  if (user.adminUser) {
+    await prisma.adminUser.update({
+      where: { id: user.adminUser.id },
+      data: { role, permissions: getDefaultPermissions(role) as any },
+    });
+  } else {
+    await prisma.adminUser.create({
+      data: {
+        userId: user.id,
+        role,
+        permissions: getDefaultPermissions(role) as any,
+      },
+    });
+  }
 
-  return permissions[role] || {};
+  // eslint-disable-next-line no-console
+  console.log('\n✅ Admin user ready');
+  // eslint-disable-next-line no-console
+  console.log(`   Login: ${email}`);
+  // eslint-disable-next-line no-console
+  console.log(`   Password: ${password}`);
+  // eslint-disable-next-line no-console
+  console.log('   ⚠️  Change this password after first login.\n');
 }
 
 main()
   .catch((error) => {
+    // eslint-disable-next-line no-console
     console.error('Fatal error:', error);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

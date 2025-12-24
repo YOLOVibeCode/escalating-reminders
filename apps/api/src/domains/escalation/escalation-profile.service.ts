@@ -77,7 +77,7 @@ export class EscalationProfileService implements IEscalationProfileService {
     return this.repository.create({
       userId,
       name: data.name,
-      description: data.description,
+      ...(data.description !== undefined ? { description: data.description } : {}),
       isPreset: false,
       tiers: data.tiers as unknown,
     });
@@ -119,9 +119,9 @@ export class EscalationProfileService implements IEscalationProfileService {
 
     // Update profile
     return this.repository.update(profileId, {
-      name: data.name,
-      description: data.description,
-      tiers: data.tiers as unknown,
+      ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(data.description !== undefined ? { description: data.description } : {}),
+      ...(data.tiers !== undefined ? { tiers: data.tiers as unknown } : {}),
     });
   }
 

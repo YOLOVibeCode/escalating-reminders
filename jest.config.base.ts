@@ -1,3 +1,5 @@
+export {};
+
 const baseConfig = {
   preset: 'ts-jest',
   testEnvironment: 'node',

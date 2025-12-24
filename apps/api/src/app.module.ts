@@ -21,6 +21,8 @@ import { AgentModule } from './domains/agents/agent.module';
 import { NotificationModule } from './domains/notifications/notification.module';
 import { AdminModule } from './domains/admin/admin.module';
 import { SeedingModule } from './domains/seeding/seeding.module';
+import { HealthController } from './health.controller';
+import { SquareWebhookController } from './webhooks/square-webhook.controller';
 
 // Workers
 import { ReminderTriggerJob } from './workers/jobs/reminder-trigger-job';
@@ -54,6 +56,7 @@ import { EscalationProcessor } from './workers/processors/escalation-processor';
     AdminModule,
     SeedingModule,
   ],
+  controllers: [HealthController, SquareWebhookController],
   providers: [
     {
       provide: APP_FILTER,

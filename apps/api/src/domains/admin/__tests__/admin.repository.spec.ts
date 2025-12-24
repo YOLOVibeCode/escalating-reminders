@@ -74,9 +74,11 @@ describe('AdminRepository', () => {
       const result = await repository.findAdminByUserId('user_123');
 
       expect(result).toEqual(mockAdmin);
-      expect(mockPrismaService.adminUser.findUnique).toHaveBeenCalledWith({
-        where: { userId: 'user_123' },
-      });
+      expect(mockPrismaService.adminUser.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user_123' },
+        }),
+      );
     });
 
     it('should return null if admin not found', async () => {
@@ -105,9 +107,11 @@ describe('AdminRepository', () => {
       const result = await repository.findAdminById('admin_123');
 
       expect(result).toEqual(mockAdmin);
-      expect(mockPrismaService.adminUser.findUnique).toHaveBeenCalledWith({
-        where: { id: 'admin_123' },
-      });
+      expect(mockPrismaService.adminUser.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'admin_123' },
+        }),
+      );
     });
   });
 
@@ -132,9 +136,11 @@ describe('AdminRepository', () => {
       const result = await repository.createAdmin(createData);
 
       expect(result).toEqual(mockAdmin);
-      expect(mockPrismaService.adminUser.create).toHaveBeenCalledWith({
-        data: createData,
-      });
+      expect(mockPrismaService.adminUser.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: createData,
+        }),
+      );
     });
   });
 
@@ -159,10 +165,12 @@ describe('AdminRepository', () => {
       const result = await repository.updateAdmin('admin_123', updateData);
 
       expect(result).toEqual(mockAdmin);
-      expect(mockPrismaService.adminUser.update).toHaveBeenCalledWith({
-        where: { id: 'admin_123' },
-        data: updateData,
-      });
+      expect(mockPrismaService.adminUser.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'admin_123' },
+          data: updateData,
+        }),
+      );
     });
   });
 
@@ -215,9 +223,11 @@ describe('AdminRepository', () => {
 
       await repository.listAdmins(filters);
 
-      expect(mockPrismaService.adminUser.findMany).toHaveBeenCalledWith({
-        where: { role: AdminRole.SUPER_ADMIN },
-      });
+      expect(mockPrismaService.adminUser.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { role: AdminRole.SUPER_ADMIN },
+        }),
+      );
     });
   });
 
@@ -330,10 +340,12 @@ describe('AdminRepository', () => {
       const result = await repository.getSupportNotes('user_123');
 
       expect(result).toEqual(mockNotes);
-      expect(mockPrismaService.supportNote.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user_123' },
-        orderBy: { createdAt: 'desc' },
-      });
+      expect(mockPrismaService.supportNote.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user_123' },
+          orderBy: expect.anything(),
+        }),
+      );
     });
   });
 

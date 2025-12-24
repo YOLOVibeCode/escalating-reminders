@@ -32,17 +32,17 @@ async function bootstrap() {
 
     // High-priority queue: reminder triggers
     await queueService.process('high-priority', 'reminder.trigger', async (data) => {
-      await reminderProcessor.processReminderTrigger(data);
+      await reminderProcessor.processReminderTrigger(data as any);
     });
 
     // High-priority queue: escalation advancement
     await queueService.process('high-priority', 'escalation.advance', async (data) => {
-      await escalationProcessor.processEscalationAdvancement(data);
+      await escalationProcessor.processEscalationAdvancement(data as any);
     });
 
     // Default queue: notifications
     await queueService.process('default', 'notification.send', async (data) => {
-      await notificationProcessor.processNotificationSend(data);
+      await notificationProcessor.processNotificationSend(data as any);
     });
 
     logger.log('Worker service started. Processing jobs from queues...');
