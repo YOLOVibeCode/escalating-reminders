@@ -147,12 +147,23 @@ function getSquareConfig() {
     throw new Error('Missing SQUARE_LOCATION_ID in .env');
   }
 
+  // Optional: route through the Noctusoft Relay instead of connect.squareup.com.
+  // Set SQUARE_BASE_URL=https://connect.squareup.noctusoft.com (or sandbox
+  // equivalent) and NOCTUSOFT_RELAY_API_KEY. When baseUrl is set, we
+  // prefer the relay key as the bearer token — the relay injects the real
+  // Square access token upstream.
+  const baseUrl = process.env.SQUARE_BASE_URL?.trim();
+  const relayKey = process.env.NOCTUSOFT_RELAY_API_KEY?.trim();
+  const isRelay = !!baseUrl && baseUrl.includes('noctusoft.com');
+  const effectiveToken = isRelay ? (relayKey || accessToken) : accessToken;
+
   return {
-    accessToken,
+    accessToken: effectiveToken,
     applicationId,
     locationId,
     environment: isProduction ? Environment.Production : Environment.Sandbox,
     env,
+    baseUrl,
   };
 }
 
@@ -323,10 +334,13 @@ async function main() {
   console.log(`Location ID: ${config.locationId}`);
   console.log(`Access Token: ${config.accessToken.substring(0, 15)}...`);
 
-  // Initialize Square client
+  // Initialize Square client. When SQUARE_BASE_URL is set (e.g., pointing at
+  // connect.squareup.noctusoft.com), the SDK routes through that host — the
+  // Noctusoft Relay injects the real Square token upstream.
   const client = new Client({
     accessToken: config.accessToken,
     environment: config.environment,
+    ...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
   });
 
   const updates: Record<string, string> = {};
