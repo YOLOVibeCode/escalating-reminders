@@ -219,3 +219,41 @@ Add `data-testid` attributes to ALL interactive elements and key containers:
 - [ ] Error messages have `data-testid="error-*"`
 - [ ] No reliance on generated CSS classes for testing
 
+---
+
+## MODULAR CODE STRUCTURE (YOLO/Rapid Prototype)
+
+### Purpose
+Keep rapid prototype code manageable while allowing flexibility for fast iteration.
+
+### SIZE THRESHOLDS (Relaxed for Prototyping)
+
+| Metric | Limit | Rationale |
+|--------|-------|-----------|
+| **File Length** | 200 lines max | Quick to scan and modify |
+| **Function** | 30 lines max | Easy to understand at a glance |
+| **Component** | 150 lines max | Prototype-friendly |
+| **Service** | 200 lines max | Business logic container |
+| **Parameters** | 5 max | Simple interfaces |
+| **Nesting Depth** | 3 levels max | Readable |
+
+### WHEN LIMITS ARE EXCEEDED
+
+```
+If File > 200 lines:
+  → Split into logical modules
+  → Don't over-engineer - just separate concerns
+
+If Function > 30 lines:
+  → Extract obvious helpers
+  → Keep it simple - this is a prototype
+```
+
+### SELF-CHECK UPDATE
+
+Add to existing checklist:
+- [ ] Files under 200 lines (prototype-friendly)
+- [ ] Functions under 30 lines
+- [ ] Code is quick to understand and modify
+- [ ] No premature abstractions
+
