@@ -22,7 +22,7 @@
     "prisma:studio": "prisma studio --schema=./prisma/schema.prisma --port 3804",
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:seed-admin": "ts-node src/scripts/seed-admin.ts",
-    "square:setup": "npx --yes tsx src/scripts/square-setup.ts"
+    "store:setup": "npx --yes tsx src/scripts/store-setup.ts"
   },
   "dependencies": {
     "@er/constants": "file:../../packages/@er/constants",
@@ -40,15 +40,14 @@
     "bullmq": "^5.4.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
+    "dotenv": "^16.3.1",
     "ioredis": "^5.3.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.1.14",
     "rxjs": "^7.8.1",
-    "square": "^40.0.0",
-    "uuid": "^9.0.1",
-    "dotenv": "^16.3.1"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.1",
