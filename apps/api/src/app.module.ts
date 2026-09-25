@@ -22,7 +22,7 @@ import { NotificationModule } from './domains/notifications/notification.module'
 import { AdminModule } from './domains/admin/admin.module';
 import { SeedingModule } from './domains/seeding/seeding.module';
 import { HealthController } from './health.controller';
-import { SquareWebhookController } from './webhooks/square-webhook.controller';
+import { StoreWebhookController } from './webhooks/store-webhook.controller';
 
 // Workers
 import { ReminderTriggerJob } from './workers/jobs/reminder-trigger-job';
@@ -56,7 +56,7 @@ import { EscalationProcessor } from './workers/processors/escalation-processor';
     AdminModule,
     SeedingModule,
   ],
-  controllers: [HealthController, SquareWebhookController],
+  controllers: [HealthController, StoreWebhookController],
   providers: [
     {
       provide: APP_FILTER,
