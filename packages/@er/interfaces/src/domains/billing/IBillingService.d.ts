@@ -7,20 +7,16 @@ export interface ISubscriptionService {
 }
 export interface IPaymentService {
     getHistory(subscriptionId: string): Promise<PaymentHistory[]>;
-    processWebhook(event: SquareWebhookEvent): Promise<void>;
+    processWebhook(event: StoreWebhookEvent): Promise<void>;
 }
 export interface CheckoutSession {
     checkoutUrl: string;
     checkoutId: string;
 }
-export interface SquareWebhookEvent {
+export interface StoreWebhookEvent {
+    id: string;
     type: string;
-    data: {
-        object: {
-            subscription?: unknown;
-            invoice?: unknown;
-            payment?: unknown;
-        };
-    };
+    version: 1;
+    store: string;
+    [field: string]: unknown;
 }
-//# sourceMappingURL=IBillingService.d.ts.map

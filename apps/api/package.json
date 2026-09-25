@@ -29,6 +29,7 @@
     "@er/interfaces": "file:../../packages/@er/interfaces",
     "@er/types": "file:../../packages/@er/types",
     "@er/utils": "file:../../packages/@er/utils",
+    "@noctusoft/store-client": "file:../../packages/store-client",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.3.0",
