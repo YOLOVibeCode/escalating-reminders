@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { SmsMessageDirection, SmsMessageLog } from '@prisma/client';
+
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 @Injectable()
 export class SmsMessageLogRepository {

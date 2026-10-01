@@ -1,7 +1,8 @@
 import { Controller, Post, Req, Res, HttpCode } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { SMS_DEFAULT_INBOUND_WEBHOOK_URL } from '../domains/sms/sms-compliance.constants';
+
 import { authorizeRelayInbound } from '../domains/sms/relay-inbound-auth';
+import { SMS_DEFAULT_INBOUND_WEBHOOK_URL } from '../domains/sms/sms-compliance.constants';
 import { SmsInboundService } from '../domains/sms/sms-inbound.service';
 
 function parseTwilioFormBody(raw: Buffer): Record<string, string> {

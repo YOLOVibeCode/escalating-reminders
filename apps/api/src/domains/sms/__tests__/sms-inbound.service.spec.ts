@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
-import { SmsInboundService } from '../sms-inbound.service';
+
 import { SmsConsentRepository } from '../sms-consent.repository';
+import { SmsInboundService } from '../sms-inbound.service';
 
 describe('SmsInboundService', () => {
   const mockConsent = {
@@ -41,6 +42,18 @@ describe('SmsInboundService', () => {
   it('handles OptOutType STOP', async () => {
     await service.handle({ From: '+15125550100', OptOutType: 'STOP' });
     expect(mockConsent.recordOptOut).toHaveBeenCalled();
+  });
+
+  it('handles OptOutType START (clears opt-out)', async () => {
+    await service.handle({ From: '+15125550100', OptOutType: 'START' });
+    expect(mockConsent.clearOptOut).toHaveBeenCalled();
+    expect(mockConsent.recordOptOut).not.toHaveBeenCalled();
+  });
+
+  it('handles OptOutType HELP with TwiML', async () => {
+    const result = await service.handle({ From: '+15125550100', OptOutType: 'HELP' });
+    expect(result.twiml).toContain('<Message>');
+    expect(mockConsent.recordOptOut).not.toHaveBeenCalled();
   });
 
   it('handles YES opt-in', async () => {

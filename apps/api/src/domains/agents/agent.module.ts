@@ -1,17 +1,18 @@
+import type { IAgentExecutor } from '@er/interfaces';
 import { Module } from '@nestjs/common';
-import { AgentDefinitionService } from './agent-definition.service';
+
 import { AgentDefinitionRepository } from './agent-definition.repository';
-import { UserAgentSubscriptionService } from './user-agent-subscription.service';
-import { UserAgentSubscriptionRepository } from './user-agent-subscription.repository';
+import { AgentDefinitionService } from './agent-definition.service';
 import { AgentExecutionService } from './agent-execution.service';
 import { AgentController } from './agent.controller';
-import { WebhookAgentExecutor } from './executors/webhook-agent.executor';
 import { EmailAgentExecutor } from './executors/email-agent.executor';
 import { SmsAgentExecutor } from './executors/sms-agent.executor';
+import { WebhookAgentExecutor } from './executors/webhook-agent.executor';
+import { UserAgentSubscriptionRepository } from './user-agent-subscription.repository';
+import { UserAgentSubscriptionService } from './user-agent-subscription.service';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { AuthModule } from '../auth/auth.module';
 import { SmsModule } from '../sms/sms.module';
-import type { IAgentExecutor } from '@er/interfaces';
 
 /**
  * Agent module.
@@ -50,5 +51,6 @@ import type { IAgentExecutor } from '@er/interfaces';
     AgentExecutionService,
   ],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS @Module container
 export class AgentModule {}
 

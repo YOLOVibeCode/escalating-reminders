@@ -5,22 +5,24 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import type { EscalationTier, UpdateEscalationProfileDto } from '@er/types';
+import { Button, Input } from '@er/ui-components';
 import Link from 'next/link';
+import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   useUpdateEscalationProfile,
   useEscalationProfile,
   useAgents,
 } from '@/lib/api-client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button, Input } from '@er/ui-components';
-import type { EscalationTier } from '@er/types';
+
 
 export default function EditEscalationProfilePage() {
   const router = useRouter();
   const params = useParams();
-  const profileId = params?.id as string;
+  const profileId = params.id as string;
   const { data: profile, isLoading: profileLoading } = useEscalationProfile(profileId);
   const { data: agents } = useAgents();
   const updateMutation = useUpdateEscalationProfile();
@@ -32,10 +34,10 @@ export default function EditEscalationProfilePage() {
 
   // Load profile data into form
   useEffect(() => {
-    if (profile) {
-      setName(profile.name || '');
-      setDescription(profile.description || '');
-      setTiers((profile.tiers as unknown as EscalationTier[]) || []);
+    if (profile !== undefined) {
+      setName(profile.name);
+      setDescription(profile.description ?? '');
+      setTiers(profile.tiers as unknown as EscalationTier[]);
     }
   }, [profile]);
 
@@ -69,15 +71,20 @@ export default function EditEscalationProfilePage() {
     field: keyof EscalationTier,
     value: unknown,
   ) => {
-    const newTiers = [...tiers];
-    (newTiers[tierIndex] as any)[field] = value;
-    setTiers(newTiers);
+    setTiers((prev) =>
+      prev.map((tier, index) => {
+        if (index !== tierIndex) {
+          return tier;
+        }
+        return { ...tier, [field]: value } as EscalationTier;
+      }),
+    );
   };
 
   const handleAgentToggle = (tierIndex: number, agentId: string) => {
     const tier = tiers[tierIndex];
-    if (!tier) return;
-    const agentIds = tier.agentIds || [];
+    if (tier === undefined) return;
+    const agentIds = tier.agentIds;
     const newAgentIds = agentIds.includes(agentId)
       ? agentIds.filter((id) => id !== agentId)
       : [...agentIds, agentId];
@@ -99,12 +106,12 @@ export default function EditEscalationProfilePage() {
     }
 
     try {
-      const payload: any = {
+      const payload: UpdateEscalationProfileDto = {
         name: name.trim(),
         tiers,
       };
       const desc = description.trim();
-      if (desc) payload.description = desc;
+      if (desc !== '') payload.description = desc;
 
       await updateMutation.mutateAsync({ id: profileId, data: payload });
       router.push('/settings/escalation-profiles');
@@ -157,14 +164,19 @@ export default function EditEscalationProfilePage() {
         <p className="mt-1 text-sm text-gray-600">Update your escalation strategy</p>
       </div>
 
-      <form onSubmit={handleSubmit} data-testid="escalation-profile-form">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        data-testid="escalation-profile-form"
+      >
         <Card>
           <CardHeader>
             <CardTitle>Profile Details</CardTitle>
             <CardDescription>Basic information about your escalation profile</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
+            {error !== null && (
               <div className="rounded-md bg-red-50 p-4" data-testid="escalation-profile-error" role="alert">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
@@ -180,7 +192,7 @@ export default function EditEscalationProfilePage() {
                 data-testid="name-input"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); }}
                 className="mt-1"
                 placeholder="e.g., My Custom Profile"
               />
@@ -195,7 +207,7 @@ export default function EditEscalationProfilePage() {
                 name="description"
                 data-testid="description-textarea"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); }}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 rows={3}
                 placeholder="Describe when to use this profile"
@@ -223,7 +235,7 @@ export default function EditEscalationProfilePage() {
                       type="button"
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleRemoveTier(tierIndex)}
+                      onClick={() => { handleRemoveTier(tierIndex); }}
                       data-testid={`remove-tier-${tierIndex}-button`}
                     >
                       Remove
@@ -244,7 +256,7 @@ export default function EditEscalationProfilePage() {
                     min="0"
                     value={tier.delayMinutes}
                     onChange={(e) =>
-                      handleTierChange(tierIndex, 'delayMinutes', parseInt(e.target.value) || 0)
+                      { handleTierChange(tierIndex, 'delayMinutes', parseInt(e.target.value) || 0); }
                     }
                     className="mt-1"
                   />
@@ -269,7 +281,7 @@ export default function EditEscalationProfilePage() {
                           type="checkbox"
                           data-testid={`tier-${tierIndex}-agent-${agent.type}-checkbox`}
                           checked={tier.agentIds.includes(agent.type)}
-                          onChange={() => handleAgentToggle(tierIndex, agent.type)}
+                          onChange={() => { handleAgentToggle(tierIndex, agent.type); }}
                           className="rounded border-gray-300"
                         />
                         <span className="text-sm">{agent.name}</span>
@@ -289,7 +301,7 @@ export default function EditEscalationProfilePage() {
                       data-testid={`tier-${tierIndex}-trusted-contacts-checkbox`}
                       checked={tier.includeTrustedContacts}
                       onChange={(e) =>
-                        handleTierChange(tierIndex, 'includeTrustedContacts', e.target.checked)
+                        { handleTierChange(tierIndex, 'includeTrustedContacts', e.target.checked); }
                       }
                       className="rounded border-gray-300"
                     />
@@ -310,7 +322,7 @@ export default function EditEscalationProfilePage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.back()}
+            onClick={() => { router.back(); }}
             disabled={updateMutation.isPending}
             data-testid="cancel-button"
           >

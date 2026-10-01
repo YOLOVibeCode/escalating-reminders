@@ -16,7 +16,7 @@ export function verifyRelayInboundSignature(
   rawBody: Buffer | string,
   header: string | undefined,
 ): boolean {
-  if (!header?.trim()) {
+  if (header === undefined || header.trim().length === 0) {
     return false;
   }
   const expected = computeRelaySignature(secret, publicUrl, rawBody);

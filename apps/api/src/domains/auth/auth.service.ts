@@ -1,16 +1,27 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
-import { AuthRepository } from './auth.repository';
 import { ERROR_CODES } from '@er/constants';
 import type { IAuthService } from '@er/interfaces';
-import type { CreateUserDto, LoginDto, TokenPair, AccessTokenPayload, RefreshTokenPayload, User } from '@er/types';
+import type {
+  CreateUserDto,
+  LoginDto,
+  TokenPair,
+  AccessTokenPayload,
+  RefreshTokenPayload,
+  User,
+  UserProfile,
+  Subscription,
+  SubscriptionTier,
+} from '@er/types';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+
+import { AuthRepository } from './auth.repository';
 import { NotFoundError } from '../../common/exceptions';
 import { ValidationError } from '../../common/exceptions/validation.exception';
-import { SmsConsentRepository } from '../sms/sms-consent.repository';
 import { parseToE164 } from '../sms/phone.util';
 import { SMS_CONSENT_TEXT_VERSION, SMS_PURPOSE } from '../sms/sms-compliance.constants';
+import { SmsConsentRepository } from '../sms/sms-consent.repository';
 
 /**
  * Auth service.
@@ -46,7 +57,7 @@ export class AuthService implements IAuthService {
       profile: {
         create: {
           displayName: dto.displayName,
-          timezone: dto.timezone || 'America/New_York',
+          timezone: dto.timezone ?? 'America/New_York',
         },
       },
       subscription: {
@@ -59,15 +70,15 @@ export class AuthService implements IAuthService {
 
     // Get user with subscription for token generation
     const userWithSubscription = await this.repository.findByIdWithSubscription(user.id);
-    if (!userWithSubscription || !userWithSubscription.subscription) {
+    if (userWithSubscription?.subscription == null) {
       throw new Error('User subscription not found');
     }
 
     // Generate tokens
-    const tokens = await this.generateTokenPair(
+    const tokens = this.generateTokenPair(
       user.id,
       user.email,
-      userWithSubscription.subscription.tier,
+      userWithSubscription.subscription.tier as SubscriptionTier,
     );
 
     return { user, tokens };
@@ -76,7 +87,7 @@ export class AuthService implements IAuthService {
   async login(dto: LoginDto): Promise<{ user: User; tokens: TokenPair }> {
     // Find user
     const user = await this.repository.findByEmail(dto.email);
-    if (!user) {
+    if (user === null) {
       throw new UnauthorizedException({
         code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
         message: 'Invalid email or password',
@@ -84,7 +95,7 @@ export class AuthService implements IAuthService {
     }
 
     // Verify password (OAuth users don't have passwords)
-    if (!user.passwordHash) {
+    if (user.passwordHash === null || user.passwordHash === '') {
       throw new UnauthorizedException({
         code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
         message: 'This account uses OAuth login. Please sign in with Google.',
@@ -101,15 +112,15 @@ export class AuthService implements IAuthService {
 
     // Get user with subscription for token generation
     const userWithSubscription = await this.repository.findByIdWithSubscription(user.id);
-    if (!userWithSubscription || !userWithSubscription.subscription) {
+    if (userWithSubscription?.subscription == null) {
       throw new Error('User subscription not found');
     }
 
     // Generate tokens
-    const tokens = await this.generateTokenPair(
+    const tokens = this.generateTokenPair(
       user.id,
       user.email,
-      userWithSubscription.subscription.tier,
+      userWithSubscription.subscription.tier as SubscriptionTier,
     );
 
     return { user, tokens };
@@ -118,14 +129,14 @@ export class AuthService implements IAuthService {
   async refreshToken(refreshToken: string): Promise<TokenPair> {
     try {
       // Verify refresh token
-      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || 'dev_refresh_secret';
+      const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') ?? 'dev_refresh_secret';
       const payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken, {
         secret: refreshSecret,
       });
 
       // Get user with subscription
       const user = await this.repository.findByIdWithSubscription(payload.sub);
-      if (!user || !user.subscription) {
+      if (user?.subscription == null) {
         throw new UnauthorizedException({
           code: ERROR_CODES.AUTH_TOKEN_INVALID,
           message: 'User not found',
@@ -133,7 +144,11 @@ export class AuthService implements IAuthService {
       }
 
       // Generate new token pair
-      const tokens = await this.generateTokenPair(user.id, user.email, user.subscription.tier);
+      const tokens = this.generateTokenPair(
+        user.id,
+        user.email,
+        user.subscription.tier as SubscriptionTier,
+      );
 
       return tokens;
     } catch (error) {
@@ -144,22 +159,22 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async logout(refreshToken: string): Promise<void> {
+  async logout(_refreshToken: string): Promise<void> {
     // Invalidate refresh token
     // This can be done via cache or database
     // For now, we'll rely on token expiration
     // In production, you'd want to store revoked tokens
   }
 
-  private async generateTokenPair(
+  private generateTokenPair(
     userId: string,
     email: string,
-    tier: string,
-  ): Promise<TokenPair> {
+    tier: SubscriptionTier,
+  ): TokenPair {
     const accessTokenPayload: AccessTokenPayload = {
       sub: userId,
       email,
-      tier: tier as any,
+      tier,
     };
 
     const refreshTokenPayload: RefreshTokenPayload = {
@@ -167,17 +182,17 @@ export class AuthService implements IAuthService {
       sessionId: '', // Session management can be added later
     };
 
-    const accessSecret = this.configService.get<string>('JWT_SECRET') || 'dev_jwt_secret';
-    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') || 'dev_refresh_secret';
+    const accessSecret = this.configService.get<string>('JWT_SECRET') ?? 'dev_jwt_secret';
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET') ?? 'dev_refresh_secret';
 
-    const accessToken = this.jwtService.sign(accessTokenPayload as any, {
+    const accessToken = this.jwtService.sign(accessTokenPayload, {
       secret: accessSecret,
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') || '15m',
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m',
     });
 
-    const refreshToken = this.jwtService.sign(refreshTokenPayload as any, {
+    const refreshToken = this.jwtService.sign(refreshTokenPayload, {
       secret: refreshSecret,
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d',
     });
 
     return {
@@ -188,7 +203,7 @@ export class AuthService implements IAuthService {
   }
 
   private getAccessTokenExpiry(): number {
-    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN') || '15m';
+    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN') ?? '15m';
     // Simple parser for common formats
     if (expiresIn.endsWith('m')) {
       return parseInt(expiresIn) * 60;
@@ -203,7 +218,7 @@ export class AuthService implements IAuthService {
   }
 
   private getRefreshTokenExpiry(): number {
-    const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+    const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
     if (expiresIn.endsWith('d')) {
       return parseInt(expiresIn) * 86400;
     }
@@ -232,17 +247,21 @@ export class AuthService implements IAuthService {
     phone: string | null;
   }> {
     const user = await this.repository.findById(userId);
-    if (!user) {
+    if (user === null) {
       throw new NotFoundError(`User with ID ${userId} not found`);
     }
 
-    if (data.smsOptIn === true && !data.phone) {
+    if (
+      data.smsOptIn === true &&
+      (data.phone === undefined || data.phone === null || data.phone === '')
+    ) {
       throw new ValidationError('Phone number is required to opt in to SMS');
     }
 
     let normalizedPhone: string | null | undefined;
     if (data.phone !== undefined) {
-      normalizedPhone = data.phone ? parseToE164(data.phone) : null;
+      normalizedPhone =
+        data.phone !== null && data.phone !== '' ? parseToE164(data.phone) : null;
       await this.repository.update(userId, { phone: normalizedPhone });
     } else {
       normalizedPhone = user.phone ?? null;
@@ -259,7 +278,7 @@ export class AuthService implements IAuthService {
 
     const profile = await this.repository.updateProfile(userId, update);
 
-    if (data.smsOptIn === true && normalizedPhone) {
+    if (data.smsOptIn === true && normalizedPhone !== null && normalizedPhone !== '') {
       const consentInput: {
         phone: string;
         purpose: string;
@@ -272,11 +291,12 @@ export class AuthService implements IAuthService {
         phone: normalizedPhone,
         purpose: SMS_PURPOSE,
         consentTextVersion: SMS_CONSENT_TEXT_VERSION,
-        source: data.smsConsentSource || '/settings/profile',
+        source: data.smsConsentSource ?? '/settings/profile',
         consentedAt: new Date(),
       };
-      if (context?.ip) consentInput.ip = context.ip;
-      if (context?.userAgent) consentInput.userAgent = context.userAgent;
+      if (context?.ip !== undefined && context.ip !== '') consentInput.ip = context.ip;
+      if (context?.userAgent !== undefined && context.userAgent !== '')
+        consentInput.userAgent = context.userAgent;
       await this.smsConsentRepository.recordOptIn(consentInput);
     }
 
@@ -285,7 +305,7 @@ export class AuthService implements IAuthService {
     return {
       displayName: profile.displayName,
       timezone: profile.timezone,
-      preferences: profile.preferences as Record<string, unknown>,
+      preferences: profile.preferences,
       phone: refreshed?.phone ?? null,
     };
   }
@@ -293,11 +313,19 @@ export class AuthService implements IAuthService {
   /**
    * Get user with profile and subscription.
    */
-  async getUserWithProfile(userId: string): Promise<User & { profile: any; subscription: any }> {
+  async getUserWithProfile(
+    userId: string,
+  ): Promise<
+    User & {
+      profile: UserProfile | null;
+      subscription: Subscription | null;
+      phone: string | null;
+    }
+  > {
     const user = await this.repository.findByIdWithProfile(userId);
-    if (!user) {
+    if (user === null) {
       throw new NotFoundError(`User with ID ${userId} not found`);
     }
-    return user as any;
+    return user;
   }
 }

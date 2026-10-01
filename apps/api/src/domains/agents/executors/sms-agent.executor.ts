@@ -1,4 +1,3 @@
-import { Injectable, Logger } from '@nestjs/common';
 import type {
   IAgentExecutor,
   NotificationPayload,
@@ -7,6 +6,8 @@ import type {
   CommandResult,
 } from '@er/interfaces';
 import type { UserAgentSubscription } from '@er/types';
+import { Injectable, Logger } from '@nestjs/common';
+
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { GuardedSmsSendService } from '../../sms/guarded-sms-send.service';
 import { parseToE164 } from '../../sms/phone.util';
@@ -30,7 +31,7 @@ export class SmsAgentExecutor implements IAgentExecutor {
       });
 
       const rawPhone = user?.phone;
-      if (!rawPhone) {
+      if (rawPhone === null || rawPhone === undefined || rawPhone === '') {
         return { success: false, error: 'User phone not found' };
       }
 
@@ -52,7 +53,7 @@ export class SmsAgentExecutor implements IAgentExecutor {
         success: true,
         deliveredAt: new Date(),
       };
-      if (result.messageSid) {
+      if (result.messageSid !== undefined && result.messageSid !== '') {
         sendResult.messageId = result.messageSid;
       }
       return sendResult;
@@ -63,11 +64,14 @@ export class SmsAgentExecutor implements IAgentExecutor {
     }
   }
 
-  async handleCommand(
+  handleCommand(
     _subscription: UserAgentSubscription,
     _command: AgentCommand,
   ): Promise<CommandResult> {
-    return { success: false, error: 'SMS commands are handled via the inbound webhook' };
+    return Promise.resolve({
+      success: false,
+      error: 'SMS commands are handled via the inbound webhook',
+    });
   }
 
   async test(subscription: UserAgentSubscription): Promise<{
@@ -92,6 +96,6 @@ export class SmsAgentExecutor implements IAgentExecutor {
     const deliveryTime = Date.now() - startedAt;
     return result.success
       ? { success: true, message: 'Test SMS sent successfully', deliveryTime }
-      : { success: false, message: result.error || 'Test SMS failed', deliveryTime };
+      : { success: false, message: result.error ?? 'Test SMS failed', deliveryTime };
   }
 }

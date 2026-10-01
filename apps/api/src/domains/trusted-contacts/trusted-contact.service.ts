@@ -1,19 +1,20 @@
+import type { TrustedContact } from '@er/types';
 import { Injectable } from '@nestjs/common';
+
 import { TrustedContactRepository } from './trusted-contact.repository';
 import { NotFoundError, ForbiddenError } from '../../common/exceptions';
-import { parseToE164 } from '../sms/phone.util';
-import { GuardedSmsSendService } from '../sms/guarded-sms-send.service';
-import { buildTrustedContactConfirmationBody } from '../sms/sms-compliance.constants';
-import type { TrustedContact } from '@er/types';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { GuardedSmsSendService } from '../sms/guarded-sms-send.service';
+import { parseToE164 } from '../sms/phone.util';
+import { buildTrustedContactConfirmationBody } from '../sms/sms-compliance.constants';
 
-export type CreateTrustedContactInput = {
+export interface ICreateTrustedContactInput {
   name: string;
   email?: string;
   phone?: string;
   relationship: string;
   notifyViaSms?: boolean;
-};
+}
 
 @Injectable()
 export class TrustedContactService {
@@ -27,21 +28,23 @@ export class TrustedContactService {
     return this.repository.findByUserId(userId);
   }
 
-  async create(userId: string, input: CreateTrustedContactInput): Promise<TrustedContact> {
-    const phone = input.phone ? parseToE164(input.phone) : null;
+  async create(userId: string, input: ICreateTrustedContactInput): Promise<TrustedContact> {
+    const phone =
+      input.phone !== undefined && input.phone !== '' ? parseToE164(input.phone) : null;
     const contact = await this.repository.create({
       userId,
       name: input.name.trim(),
-      email: input.email?.trim() || null,
+      email:
+        input.email !== undefined && input.email.trim() !== '' ? input.email.trim() : null,
       phone,
       relationship: input.relationship.trim(),
       notificationPreferences: {
         email: true,
-        sms: Boolean(input.notifyViaSms && phone),
+        sms: input.notifyViaSms === true && phone !== null && phone !== '',
       },
     });
 
-    if (phone) {
+    if (phone !== null && phone !== '') {
       await this.sendConfirmationSms(userId, phone);
     }
 
@@ -51,10 +54,10 @@ export class TrustedContactService {
   async update(
     userId: string,
     id: string,
-    input: Partial<CreateTrustedContactInput>,
+    input: Partial<ICreateTrustedContactInput>,
   ): Promise<TrustedContact> {
     const existing = await this.repository.findById(id);
-    if (!existing) {
+    if (existing === null) {
       throw new NotFoundError(`Trusted contact ${id} not found`);
     }
     if (existing.userId !== userId) {
@@ -64,7 +67,7 @@ export class TrustedContactService {
     const previousPhone = existing.phone;
     const phone =
       input.phone !== undefined
-        ? input.phone
+        ? input.phone !== ''
           ? parseToE164(input.phone)
           : null
         : existing.phone;
@@ -78,22 +81,28 @@ export class TrustedContactService {
     }> = {};
 
     if (input.name !== undefined) updatePayload.name = input.name.trim();
-    if (input.email !== undefined) updatePayload.email = input.email?.trim() || null;
+    if (input.email !== undefined) {
+      updatePayload.email =
+        input.email.trim() !== '' ? input.email.trim() : null;
+    }
     if (input.phone !== undefined) updatePayload.phone = phone;
     if (input.relationship !== undefined) updatePayload.relationship = input.relationship.trim();
     if (input.notifyViaSms !== undefined || input.phone !== undefined) {
+      const existingPrefs = existing.notificationPreferences as { sms?: boolean };
+      const wantsSms = input.notifyViaSms ?? (existingPrefs.sms === true);
       updatePayload.notificationPreferences = {
         email: true,
-        sms: Boolean(
-          (input.notifyViaSms ?? (existing.notificationPreferences as { sms?: boolean }).sms) &&
-            phone,
-        ),
+        sms: wantsSms && phone !== null && phone !== '',
       };
     }
 
     const updated = await this.repository.update(id, updatePayload);
 
-    if (phone && phone !== previousPhone) {
+    if (
+      phone !== null &&
+      phone !== '' &&
+      phone !== previousPhone
+    ) {
       await this.sendConfirmationSms(userId, phone);
     }
 
@@ -102,7 +111,7 @@ export class TrustedContactService {
 
   async remove(userId: string, id: string): Promise<void> {
     const existing = await this.repository.findById(id);
-    if (!existing) {
+    if (existing === null) {
       throw new NotFoundError(`Trusted contact ${id} not found`);
     }
     if (existing.userId !== userId) {
@@ -116,7 +125,8 @@ export class TrustedContactService {
       where: { id: userId },
       include: { profile: true },
     });
-    const who = user?.profile?.displayName || user?.email || 'Someone';
+    const who =
+      user?.profile?.displayName ?? user?.email ?? 'Someone';
     await this.guardedSmsSend.send({
       phone,
       body: buildTrustedContactConfirmationBody(who),

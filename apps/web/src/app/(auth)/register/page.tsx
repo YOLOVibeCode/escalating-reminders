@@ -5,12 +5,15 @@
 
 'use client';
 
-import { useState } from 'react';
+import { Button, Input } from '@er/ui-components';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { PublicFooter } from '@/components/public-footer';
 import { useRegister } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
-import { Button, Input } from '@er/ui-components';
-import { PublicFooter } from '@/components/public-footer';
+
+
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -56,8 +59,14 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit} data-testid="register-form">
-          {error && (
+        <form
+          className="mt-8 space-y-6"
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          data-testid="register-form"
+        >
+          {error !== null && (
             <div className="rounded-md bg-red-50 p-4" data-testid="register-error" role="alert">
               <p className="text-sm text-red-800">{error}</p>
             </div>
@@ -76,7 +85,7 @@ export default function RegisterPage() {
                 autoComplete="name"
                 required
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) => { setDisplayName(e.target.value); }}
                 className="mt-1"
                 placeholder="John Doe"
               />
@@ -94,7 +103,7 @@ export default function RegisterPage() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); }}
                 className="mt-1"
                 placeholder="you@example.com"
               />
@@ -112,7 +121,7 @@ export default function RegisterPage() {
                 autoComplete="new-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); }}
                 className="mt-1"
                 placeholder="••••••••"
                 minLength={8}

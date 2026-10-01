@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { loginAsRole, type TestRole } from '../helpers/login-as-role';
+
 import { assertOnDashboard } from '../helpers/assert-on-dashboard';
+import { loginAsRole } from '../helpers/login-as-role';
 import { LoginPage } from '../page-objects/login.page';
 
 /**
@@ -149,7 +150,7 @@ test.describe('Layer 1: Authentication Tests', () => {
     }
   });
 
-  test('01-10: OAuth login redirects to provider @auth', async ({ page, context }) => {
+  test('01-10: OAuth login redirects to provider @auth', async ({ page, context: _context }) => {
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
     
@@ -230,7 +231,7 @@ test.describe('Layer 1: Authentication Tests', () => {
     ];
     
     const errorResults = await Promise.all(errorChecks);
-    const errorVisible = errorResults.some(result => result === true);
+    const errorVisible = errorResults.some(result => result);
     
     // Also wait for potential redirect to login (happens after 3 seconds)
     await page.waitForTimeout(4000);

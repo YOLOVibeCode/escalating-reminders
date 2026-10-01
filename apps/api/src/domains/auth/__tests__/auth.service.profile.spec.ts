@@ -3,20 +3,20 @@
  * Following TDD - tests written before implementation.
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
+import type { User, UserProfile } from '@er/types';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { AuthService } from '../auth.service';
-import { AuthRepository } from '../auth.repository';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { NotFoundError } from '../../../common/exceptions';
-import type { User, UserProfile } from '@er/types';
+import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { SmsConsentRepository } from '../../sms/sms-consent.repository';
+import { AuthRepository } from '../auth.repository';
+import { AuthService } from '../auth.service';
+
 
 describe('AuthService - Profile Update', () => {
   let service: AuthService;
-  let repository: AuthRepository;
-  let prismaService: PrismaService;
 
   const mockSmsConsentRepository = {
     recordOptIn: jest.fn(),
@@ -70,8 +70,6 @@ describe('AuthService - Profile Update', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    repository = module.get<AuthRepository>(AuthRepository);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {

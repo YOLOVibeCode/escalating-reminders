@@ -1,18 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { AuthService } from '../auth.service';
-import { AuthRepository } from '../auth.repository';
 import { ERROR_CODES } from '@er/constants';
+import type { CreateUserDto, LoginDto } from '@er/types';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
+
+import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { SmsConsentRepository } from '../../sms/sms-consent.repository';
-import type { CreateUserDto, LoginDto, TokenPair } from '@er/types';
+import { AuthRepository } from '../auth.repository';
+import { AuthService } from '../auth.service';
+
+jest.mock('bcrypt', () => {
+  const actual = jest.requireActual<typeof import('bcrypt')>('bcrypt');
+  return {
+    ...actual,
+    compare: jest.fn(),
+  };
+});
+
+const mockBcryptCompare = jest.mocked(bcrypt.compare);
 
 describe('AuthService', () => {
   let service: AuthService;
-  let repository: AuthRepository;
-  let jwtService: JwtService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     user: {
@@ -62,11 +71,9 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    repository = module.get<AuthRepository>(AuthRepository);
-    jwtService = module.get<JwtService>(JwtService);
-    prismaService = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
+    mockBcryptCompare.mockReset();
   });
 
   describe('register', () => {
@@ -116,9 +123,9 @@ describe('AuthService', () => {
       });
 
       await expect(service.register(createUserDto)).rejects.toMatchObject({
-        response: expect.objectContaining({
+        response: {
           code: ERROR_CODES.RESOURCE_ALREADY_EXISTS,
-        }),
+        },
       });
     });
 
@@ -138,7 +145,10 @@ describe('AuthService', () => {
 
       await service.register(createUserDto);
 
-      const createCall = mockPrismaService.user.create.mock.calls[0][0];
+      const createCalls = mockPrismaService.user.create.mock.calls as [
+        { data: { passwordHash: string } },
+      ][];
+      const createCall = createCalls[0]?.[0];
       expect(createCall.data.passwordHash).not.toBe(createUserDto.password);
       expect(createCall.data.passwordHash).toHaveLength(60); // bcrypt hash length
     });
@@ -168,7 +178,7 @@ describe('AuthService', () => {
       mockJwtService.sign.mockReturnValue('mock-token');
 
       // Mock bcrypt compare
-      jest.spyOn(require('bcrypt'), 'compare').mockResolvedValue(true);
+      mockBcryptCompare.mockResolvedValue(true as never);
 
       const result = await service.login(loginDto);
 
@@ -185,20 +195,20 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(service.login(loginDto)).rejects.toMatchObject({
-        response: expect.objectContaining({
+        response: {
           code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
-        }),
+        },
       });
     });
 
     it('should throw error if password is incorrect', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      jest.spyOn(require('bcrypt'), 'compare').mockResolvedValue(false);
+      mockBcryptCompare.mockResolvedValue(false as never);
 
       await expect(service.login(loginDto)).rejects.toMatchObject({
-        response: expect.objectContaining({
+        response: {
           code: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
-        }),
+        },
       });
     });
   });
@@ -231,9 +241,9 @@ describe('AuthService', () => {
       });
 
       await expect(service.refreshToken('invalid-token')).rejects.toMatchObject({
-        response: expect.objectContaining({
+        response: {
           code: ERROR_CODES.AUTH_TOKEN_INVALID,
-        }),
+        },
       });
     });
 
@@ -245,9 +255,9 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(service.refreshToken('valid-refresh-token')).rejects.toMatchObject({
-        response: expect.objectContaining({
+        response: {
           code: ERROR_CODES.AUTH_TOKEN_INVALID,
-        }),
+        },
       });
     });
   });

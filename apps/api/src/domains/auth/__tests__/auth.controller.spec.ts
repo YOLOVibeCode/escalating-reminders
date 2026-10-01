@@ -1,14 +1,14 @@
+import type { CreateUserDto, LoginDto, TokenPair, User } from '@er/types';
 import { Test, TestingModule } from '@nestjs/testing';
+
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
-import { OAuthProviderService } from '../oauth-provider.service';
 import { OAuthAuthService } from '../oauth-auth.service';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import type { CreateUserDto, LoginDto, TokenPair, User } from '@er/types';
+import { OAuthProviderService } from '../oauth-provider.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let service: AuthService;
 
   const mockAuthService = {
     register: jest.fn(),
@@ -34,7 +34,6 @@ describe('AuthController', () => {
       .compile();
 
     controller = module.get<AuthController>(AuthController);
-    service = module.get<AuthService>(AuthService);
 
     jest.clearAllMocks();
   });

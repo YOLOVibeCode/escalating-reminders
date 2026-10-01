@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../../infrastructure/database/database.module';
-import { SmsConsentRepository } from './sms-consent.repository';
-import { SmsMessageLogRepository } from './sms-message-log.repository';
+
 import { GuardedSmsSendService } from './guarded-sms-send.service';
+import { SmsConsentRepository } from './sms-consent.repository';
 import { SmsInboundService } from './sms-inbound.service';
+import { SmsMessageLogRepository } from './sms-message-log.repository';
+import { DatabaseModule } from '../../infrastructure/database/database.module';
 
 @Module({
   imports: [DatabaseModule],
@@ -20,4 +21,5 @@ import { SmsInboundService } from './sms-inbound.service';
     SmsInboundService,
   ],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS @Module container
 export class SmsModule {}

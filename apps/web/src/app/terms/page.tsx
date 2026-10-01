@@ -1,10 +1,12 @@
 import Link from 'next/link';
-import { PublicFooter } from '@/components/public-footer';
+
 import {
   SMS_BRAND,
   SMS_PURPOSE,
   SMS_SUPPORT_EMAIL,
 } from '../../../../../packages/@er/constants/src/sms-compliance';
+
+import { PublicFooter } from '@/components/public-footer';
 
 export default function TermsPage(): JSX.Element {
   return (

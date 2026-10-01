@@ -1,3 +1,5 @@
+import type { OAuthProvider } from '@er/interfaces';
+import type { CreateUserDto, LoginDto, TokenPair, User, UserProfile, Subscription } from '@er/types';
 import {
   Controller,
   Post,
@@ -14,12 +16,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
+
 import { AuthService } from './auth.service';
-import { OAuthProviderService } from './oauth-provider.service';
 import { OAuthAuthService } from './oauth-auth.service';
+import { OAuthProviderService } from './oauth-provider.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { CreateUserDto, LoginDto, TokenPair, User } from '@er/types';
-import type { OAuthProvider } from '@er/interfaces';
 
 /**
  * Auth controller.
@@ -88,7 +89,18 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user information' })
   @ApiResponse({ status: 200, description: 'User information retrieved' })
-  async getMe(@Request() req: any): Promise<{ success: true; data: any }> {
+  async getMe(
+    @Request() req: { user: { sub: string } },
+  ): Promise<{
+    success: true;
+    data: {
+      id: string;
+      email: string;
+      profile: UserProfile | null;
+      phone: string | null;
+      subscription: Subscription | null;
+    };
+  }> {
     const user = await this.authService.getUserWithProfile(req.user.sub);
     return {
       success: true,
@@ -135,7 +147,7 @@ export class AuthController {
   }> {
     const userAgent = req.headers['user-agent'];
     const context: { ip?: string; userAgent?: string } = {};
-    if (req.ip) context.ip = req.ip;
+    if (req.ip !== undefined && req.ip !== '') context.ip = req.ip;
     if (typeof userAgent === 'string') context.userAgent = userAgent;
     const result = await this.authService.updateProfile(req.user.sub, data, context);
     return {
@@ -152,7 +164,7 @@ export class AuthController {
     @Param('provider') provider: string,
     @Query('redirectUri') redirectUri: string,
   ): Promise<{ success: true; data: { url: string; state: string } }> {
-    if (!redirectUri) {
+    if (redirectUri === '') {
       throw new Error('redirectUri query parameter is required');
     }
 
@@ -178,7 +190,7 @@ export class AuthController {
     @Query('redirectUri') redirectUri: string,
     @Res() res: Response,
   ): Promise<void> {
-    if (!code) {
+    if (code === '') {
       res.redirect(`${redirectUri}?error=missing_code`);
       return;
     }

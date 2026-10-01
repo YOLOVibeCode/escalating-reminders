@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+
+import { parseToE164 } from './phone.util';
 import {
   SMS_CONSENT_TEXT_VERSION,
   SMS_HELP_KEYWORDS,
@@ -9,23 +11,22 @@ import {
   buildSmsHelpReplyBody,
 } from './sms-compliance.constants';
 import { SmsConsentRepository } from './sms-consent.repository';
-import { parseToE164 } from './phone.util';
 
-export type InboundSmsFields = {
+export interface IInboundSmsFields {
   From?: string;
   Body?: string;
   OptOutType?: string;
-};
+}
 
-export type InboundSmsResult = {
+export interface IInboundSmsResult {
   twiml: string;
-};
+}
 
 @Injectable()
 export class SmsInboundService {
   constructor(private readonly consentRepository: SmsConsentRepository) {}
 
-  async handle(fields: InboundSmsFields): Promise<InboundSmsResult> {
+  async handle(fields: IInboundSmsFields): Promise<IInboundSmsResult> {
     const fromRaw = fields.From ?? '';
     const phone = parseToE164(fromRaw);
     const body = (fields.Body ?? '').trim();

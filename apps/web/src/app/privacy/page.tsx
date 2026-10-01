@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { PublicFooter } from '@/components/public-footer';
+
 import { SMS_SUPPORT_EMAIL } from '../../../../../packages/@er/constants/src/sms-compliance';
+
+import { PublicFooter } from '@/components/public-footer';
 
 const SMS_PRIVACY_VERBATIM =
   'We do not share, sell, or provide your mobile phone number or SMS opt-in data to third parties or affiliates for marketing or promotional purposes.';

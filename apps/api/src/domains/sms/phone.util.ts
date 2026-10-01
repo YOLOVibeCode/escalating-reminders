@@ -9,7 +9,7 @@ export function parseToE164(phone: string, defaultRegion: string = DEFAULT_REGIO
     throw new Error('Phone number is required');
   }
   const parsed = parsePhoneNumberFromString(trimmed, defaultRegion as 'US');
-  if (!parsed?.isValid()) {
+  if (parsed === undefined || !parsed.isValid()) {
     throw new Error('Invalid phone number');
   }
   return parsed.format('E.164');

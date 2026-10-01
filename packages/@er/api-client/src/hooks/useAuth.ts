@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
+
 import type { ApiClient } from '../client';
 import type {
   RegisterRequest,
@@ -10,14 +12,43 @@ import type {
   User,
 } from '../types';
 
+export interface IUpdateProfileInput {
+  displayName?: string;
+  timezone?: string;
+  preferences?: Record<string, unknown>;
+  phone?: string | null;
+  smsOptIn?: boolean;
+  smsConsentSource?: string;
+}
+
+export interface IUpdateProfileResponse {
+  displayName: string;
+  timezone: string;
+  preferences: Record<string, unknown>;
+  phone: string | null;
+}
+
+export interface IAuthHooks {
+  useMe: () => UseQueryResult<User>;
+  useRegister: () => UseMutationResult<RegisterResponse, Error, RegisterRequest>;
+  useLogin: () => UseMutationResult<LoginResponse, Error, LoginRequest>;
+  useRefresh: () => UseMutationResult<RefreshResponse, Error, RefreshRequest>;
+  useLogout: () => UseMutationResult<undefined, Error, string>;
+  useUpdateProfile: () => UseMutationResult<
+    IUpdateProfileResponse,
+    Error,
+    IUpdateProfileInput
+  >;
+}
+
 /**
  * React Query hooks for authentication.
  */
-export function createAuthHooks(client: ApiClient) {
+export function createAuthHooks(client: ApiClient): IAuthHooks {
   /**
    * Get current user.
    */
-  function useMe() {
+  function useMe(): UseQueryResult<User> {
     return useQuery<User>({
       queryKey: ['auth', 'me'],
       queryFn: () => client.getMe(),
@@ -28,7 +59,7 @@ export function createAuthHooks(client: ApiClient) {
   /**
    * Register a new user.
    */
-  function useRegister() {
+  function useRegister(): UseMutationResult<RegisterResponse, Error, RegisterRequest> {
     const queryClient = useQueryClient();
 
     return useMutation<RegisterResponse, Error, RegisterRequest>({
@@ -43,7 +74,7 @@ export function createAuthHooks(client: ApiClient) {
   /**
    * Login user.
    */
-  function useLogin() {
+  function useLogin(): UseMutationResult<LoginResponse, Error, LoginRequest> {
     const queryClient = useQueryClient();
 
     return useMutation<LoginResponse, Error, LoginRequest>({
@@ -58,7 +89,7 @@ export function createAuthHooks(client: ApiClient) {
   /**
    * Refresh access token.
    */
-  function useRefresh() {
+  function useRefresh(): UseMutationResult<RefreshResponse, Error, RefreshRequest> {
     return useMutation<RefreshResponse, Error, RefreshRequest>({
       mutationFn: (data) => client.refresh(data),
     });
@@ -67,11 +98,14 @@ export function createAuthHooks(client: ApiClient) {
   /**
    * Logout user.
    */
-  function useLogout() {
+  function useLogout(): UseMutationResult<undefined, Error, string> {
     const queryClient = useQueryClient();
 
-    return useMutation<void, Error, string>({
-      mutationFn: (refreshToken) => client.logout(refreshToken),
+    return useMutation<undefined, Error, string>({
+      mutationFn: async (refreshToken) => {
+        await client.logout(refreshToken);
+        return undefined;
+      },
       onSuccess: () => {
         // Clear all queries
         queryClient.clear();
@@ -79,29 +113,21 @@ export function createAuthHooks(client: ApiClient) {
     });
   }
 
-  const useUpdateProfile = () => {
+  function useUpdateProfile(): UseMutationResult<
+    IUpdateProfileResponse,
+    Error,
+    IUpdateProfileInput
+  > {
     const queryClient = useQueryClient();
-    return useMutation({
-      mutationFn: async (data: {
-        displayName?: string;
-        timezone?: string;
-        preferences?: Record<string, unknown>;
-        phone?: string | null;
-        smsOptIn?: boolean;
-        smsConsentSource?: string;
-      }) => {
-        return client.patch<{
-          displayName: string;
-          timezone: string;
-          preferences: Record<string, unknown>;
-          phone: string | null;
-        }>('/auth/me', data);
+    return useMutation<IUpdateProfileResponse, Error, IUpdateProfileInput>({
+      mutationFn: async (data) => {
+        return client.patch<IUpdateProfileResponse>('/auth/me', data);
       },
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+        void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       },
     });
-  };
+  }
 
   return {
     useMe,
@@ -112,4 +138,3 @@ export function createAuthHooks(client: ApiClient) {
     useUpdateProfile,
   };
 }
-

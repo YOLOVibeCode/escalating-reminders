@@ -1,22 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle , Button, Input } from '@er/ui-components';
 import Link from 'next/link';
-import { apiClient } from '@/lib/api-client';
-import { Card, CardContent, CardHeader, CardTitle } from '@er/ui-components';
-import { Button, Input } from '@er/ui-components';
+import { useEffect, useState } from 'react';
 
-type TrustedContact = {
+import { apiClient } from '@/lib/api-client';
+
+
+interface ITrustedContactRow {
   id: string;
   name: string;
   email?: string | null;
   phone?: string | null;
   relationship: string;
   notificationPreferences: { email: boolean; sms: boolean };
-};
+}
 
 export default function TrustedContactsPage(): JSX.Element {
-  const [contacts, setContacts] = useState<TrustedContact[]>([]);
+  const [contacts, setContacts] = useState<ITrustedContactRow[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [relationship, setRelationship] = useState('friend');
@@ -27,7 +28,7 @@ export default function TrustedContactsPage(): JSX.Element {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await apiClient.get<TrustedContact[]>('/trusted-contacts');
+      const data = await apiClient.get<ITrustedContactRow[]>('/trusted-contacts');
       setContacts(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load contacts');
@@ -66,13 +67,19 @@ export default function TrustedContactsPage(): JSX.Element {
       </Link>
       <h1 className="text-3xl font-bold text-gray-900">Trusted Contacts</h1>
 
-      <form data-testid="form-trusted-contact" onSubmit={handleSubmit} className="space-y-4">
+      <form
+        data-testid="form-trusted-contact"
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        className="space-y-4"
+      >
         <Card>
           <CardHeader>
             <CardTitle>Add contact</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
+            {error !== null && (
               <p className="text-sm text-red-600" data-testid="error-trusted-contact" role="alert">
                 {error}
               </p>
@@ -85,7 +92,7 @@ export default function TrustedContactsPage(): JSX.Element {
                 id="contact-name"
                 data-testid="input-contact-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); }}
                 required
               />
             </div>
@@ -98,7 +105,7 @@ export default function TrustedContactsPage(): JSX.Element {
                 type="tel"
                 data-testid="input-contact-phone"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => { setPhone(e.target.value); }}
                 placeholder="+1 555 123 4567"
               />
             </div>
@@ -109,7 +116,7 @@ export default function TrustedContactsPage(): JSX.Element {
                   type="checkbox"
                   data-testid="checkbox-contact-notify-sms"
                   checked={notifyViaSms}
-                  onChange={(e) => setNotifyViaSms(e.target.checked)}
+                  onChange={(e) => { setNotifyViaSms(e.target.checked); }}
                 />
                 Request SMS notifications for this contact (they must reply YES to opt in)
               </label>
@@ -122,7 +129,7 @@ export default function TrustedContactsPage(): JSX.Element {
                 id="contact-relationship"
                 data-testid="input-contact-relationship"
                 value={relationship}
-                onChange={(e) => setRelationship(e.target.value)}
+                onChange={(e) => { setRelationship(e.target.value); }}
                 required
               />
             </div>
@@ -144,7 +151,7 @@ export default function TrustedContactsPage(): JSX.Element {
             <ul data-testid="list-trusted-contacts" className="space-y-2">
               {contacts.map((c) => (
                 <li key={c.id} data-testid={`row-contact-${c.id}`}>
-                  {c.name} — {c.phone || 'no phone'}
+                  {c.name} — {c.phone ?? 'no phone'}
                 </li>
               ))}
             </ul>

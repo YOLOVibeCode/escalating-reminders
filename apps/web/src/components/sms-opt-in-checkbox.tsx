@@ -1,21 +1,22 @@
 'use client';
 
 import Link from 'next/link';
+
 import { SMS_BRAND, SMS_PURPOSE } from '../../../../packages/@er/constants/src/sms-compliance';
 
-type SmsOptInCheckboxProps = {
+interface ISmsOptInCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   testId?: string;
-};
+}
 
 export function SmsOptInCheckbox({
   checked,
   onChange,
   disabled,
   testId = 'checkbox-sms-opt-in',
-}: SmsOptInCheckboxProps): JSX.Element {
+}: ISmsOptInCheckboxProps): JSX.Element {
   return (
     <label className="flex items-start gap-2 text-sm text-gray-700" htmlFor={testId}>
       <input
@@ -24,7 +25,7 @@ export function SmsOptInCheckbox({
         data-testid={testId}
         checked={checked}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
+        onChange={(e) => { onChange(e.target.checked); }}
         className="mt-1"
       />
       <span>

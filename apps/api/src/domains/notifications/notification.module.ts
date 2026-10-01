@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
-import { NotificationService } from './notification.service';
-import { NotificationRepository } from './notification.repository';
+
 import { NotificationQueryService } from './notification-query.service';
 import { NotificationController } from './notification.controller';
+import { NotificationRepository } from './notification.repository';
+import { NotificationService } from './notification.service';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
-import { ReminderModule } from '../reminders/reminder.module';
-import { EscalationModule } from '../escalation/escalation.module';
 import { AgentModule } from '../agents/agent.module';
 import { AuthModule } from '../auth/auth.module';
+import { EscalationModule } from '../escalation/escalation.module';
+import { ReminderModule } from '../reminders/reminder.module';
 import { SmsModule } from '../sms/sms.module';
 
 /**
@@ -20,5 +21,6 @@ import { SmsModule } from '../sms/sms.module';
   providers: [NotificationService, NotificationRepository, NotificationQueryService],
   exports: [NotificationService, NotificationQueryService],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS @Module container
 export class NotificationModule {}
 

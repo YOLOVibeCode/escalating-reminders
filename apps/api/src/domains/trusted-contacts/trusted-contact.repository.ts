@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type { TrustedContact } from '@er/types';
+import { Injectable } from '@nestjs/common';
+
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 @Injectable()
 export class TrustedContactRepository {

@@ -5,19 +5,33 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useMe, useUpdateProfile } from '@/lib/api-client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@er/ui-components';
-import { Button, Input } from '@er/ui-components';
+import type { User, UserProfile } from '@er/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle , Button, Input } from '@er/ui-components';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
 import { SmsOptInCheckbox } from '@/components/sms-opt-in-checkbox';
+import { useMe, useUpdateProfile } from '@/lib/api-client';
+
+type AuthMeUser = User & {
+  profile?: UserProfile | null;
+  phone?: string | null;
+};
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return 'Failed to update profile. Please try again.';
+}
 
 export default function ProfileEditPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const meQuery = useMe() as unknown as { data?: any; isLoading: boolean };
+  const meQuery = useMe() as UseQueryResult<AuthMeUser>;
   const user = meQuery.data;
   const isLoading = meQuery.isLoading;
   const updateProfileMutation = useUpdateProfile();
@@ -28,11 +42,13 @@ export default function ProfileEditPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.profile) {
-      setDisplayName(user.profile.displayName || '');
-      setTimezone(user.profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+    if (user?.profile !== undefined && user.profile !== null) {
+      setDisplayName(user.profile.displayName);
+      setTimezone(
+        user.profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      );
     }
-    if (user?.phone) {
+    if (user?.phone !== undefined && user.phone !== null && user.phone !== '') {
       setPhone(user.phone);
     }
   }, [user]);
@@ -52,9 +68,9 @@ export default function ProfileEditPage() {
       const display = displayName.trim();
       const tz = timezone.trim();
       const phoneTrimmed = phone.trim();
-      if (display) payload.displayName = display;
-      if (tz) payload.timezone = tz;
-      if (phoneTrimmed) payload.phone = phoneTrimmed;
+      if (display !== '') payload.displayName = display;
+      if (tz !== '') payload.timezone = tz;
+      if (phoneTrimmed !== '') payload.phone = phoneTrimmed;
       else payload.phone = null;
       if (smsOptIn) {
         payload.smsOptIn = true;
@@ -62,13 +78,12 @@ export default function ProfileEditPage() {
       }
 
       await updateProfileMutation.mutateAsync(payload);
-      
-      // Invalidate and refetch user data
+
       await queryClient.invalidateQueries({ queryKey: ['me'] });
-      
+
       router.push('/settings');
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.message || err?.message || 'Failed to update profile. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -90,14 +105,19 @@ export default function ProfileEditPage() {
         <p className="mt-1 text-sm text-gray-600">Update your account information</p>
       </div>
 
-      <form onSubmit={handleSubmit} data-testid="profile-form">
+      <form
+        onSubmit={(e) => {
+          void handleSubmit(e);
+        }}
+        data-testid="profile-form"
+      >
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
             <CardDescription>Update your display name and timezone</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && (
+            {error !== null && (
               <div className="rounded-md bg-red-50 p-4" data-testid="profile-error" role="alert">
                 <p className="text-sm text-red-800">{error}</p>
               </div>
@@ -110,7 +130,7 @@ export default function ProfileEditPage() {
               <Input
                 id="email"
                 type="email"
-                value={user?.email || ''}
+                value={user?.email ?? ''}
                 disabled
                 className="mt-1 bg-gray-50"
               />
@@ -127,7 +147,7 @@ export default function ProfileEditPage() {
                 type="text"
                 data-testid="display-name-input"
                 value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                onChange={(e) => { setDisplayName(e.target.value); }}
                 className="mt-1"
                 placeholder="Your display name"
               />
@@ -143,14 +163,14 @@ export default function ProfileEditPage() {
                 type="tel"
                 data-testid="input-phone"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => { setPhone(e.target.value); }}
                 className="mt-1"
                 placeholder="+1 555 123 4567"
                 autoComplete="tel"
               />
             </div>
 
-            {phone.trim() && (
+            {phone.trim() !== '' && (
               <SmsOptInCheckbox checked={smsOptIn} onChange={setSmsOptIn} />
             )}
 
@@ -164,7 +184,7 @@ export default function ProfileEditPage() {
                 type="text"
                 data-testid="timezone-input"
                 value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
+                onChange={(e) => { setTimezone(e.target.value); }}
                 className="mt-1"
                 placeholder="America/New_York"
               />
@@ -179,7 +199,7 @@ export default function ProfileEditPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.back()}
+            onClick={() => { router.back(); }}
             disabled={updateProfileMutation.isPending}
             data-testid="cancel-button"
           >
@@ -193,4 +213,3 @@ export default function ProfileEditPage() {
     </div>
   );
 }
-

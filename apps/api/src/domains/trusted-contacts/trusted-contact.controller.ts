@@ -1,3 +1,4 @@
+import type { TrustedContact } from '@er/types';
 import {
   Controller,
   Get,
@@ -12,9 +13,9 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+
 import { TrustedContactService } from './trusted-contact.service';
-import type { TrustedContact } from '@er/types';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @ApiTags('trusted-contacts')
 @ApiBearerAuth()

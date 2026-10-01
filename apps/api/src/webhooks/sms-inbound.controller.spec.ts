@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+
 import { SmsInboundController } from './sms-inbound.controller';
 import { SmsInboundService } from '../domains/sms/sms-inbound.service';
 
@@ -33,12 +34,12 @@ describe('SmsInboundController', () => {
     let status = 0;
     let payload = '';
     const res = {
-      status(code: number) {
+      status(code: number): typeof res {
         status = code;
         return this;
       },
       setHeader: jest.fn(),
-      send(data: string) {
+      send(data: string): typeof res {
         payload = data;
         return this;
       },
@@ -53,6 +54,28 @@ describe('SmsInboundController', () => {
     );
     expect(status).toBe(200);
     expect(payload).toContain('Response');
+  });
+
+  it('rejects signature when body bytes differ from signed payload (re-encoded)', async () => {
+    const controller = new SmsInboundController(inboundService as unknown as SmsInboundService);
+    const canonical = 'From=%2B15125550100&Body=HELP';
+    const reEncoded = 'Body=HELP&From=%2B15125550100';
+    const raw = Buffer.from(reEncoded);
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+      setHeader: jest.fn(),
+      send: jest.fn(),
+    };
+    await controller.handle(
+      {
+        rawBody: raw,
+        headers: { 'x-relay-signature': sign(secret, publicUrl, canonical) },
+      } as never,
+      res as never,
+    );
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(inboundService.handle).not.toHaveBeenCalled();
   });
 
   it('rejects invalid signature', async () => {

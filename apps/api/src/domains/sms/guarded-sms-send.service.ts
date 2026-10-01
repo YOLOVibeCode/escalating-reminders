@@ -1,23 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+
 import { SMS_BRAND, SMS_PURPOSE, SMS_RELAY_SEND_URL } from './sms-compliance.constants';
 import { SmsConsentRepository } from './sms-consent.repository';
 import { SmsMessageLogRepository } from './sms-message-log.repository';
+import { assertSingleSmsSegment } from './sms-segment.util';
 
-export type GuardedSmsSendOptions = {
+export interface IGuardedSmsSendOptions {
   phone: string;
   body: string;
   purpose?: string;
   allowWithoutConsent?: 'double-opt-in-confirmation';
   metadata?: Record<string, unknown>;
-};
+}
 
-type RelayErrorBody = {
+interface IRelayErrorBody {
   error?: boolean;
   code?: number;
   message?: string;
   sid?: string;
-};
+}
 
 @Injectable()
 export class GuardedSmsSendService {
@@ -31,8 +33,8 @@ export class GuardedSmsSendService {
 
   private getRelayApiKey(): string {
     const key =
-      this.configService.get<string>('NOCTUSOFT_API_KEY') ||
-      this.configService.get<string>('NOCTUSOFT_RELAY_API_KEY') ||
+      this.configService.get<string>('NOCTUSOFT_API_KEY') ??
+      this.configService.get<string>('NOCTUSOFT_RELAY_API_KEY') ??
       '';
     return key.trim();
   }
@@ -46,10 +48,11 @@ export class GuardedSmsSendService {
   }
 
   /** Single entry point for outbound SMS via the Noctusoft relay. */
-  async send(options: GuardedSmsSendOptions): Promise<{ messageSid?: string }> {
+  async send(options: IGuardedSmsSendOptions): Promise<{ messageSid?: string }> {
     const purpose = options.purpose ?? SMS_PURPOSE;
     const phone = options.phone;
     const brandedBody = this.prefixBrand(options.body);
+    assertSingleSmsSegment(brandedBody);
 
     if (options.allowWithoutConsent !== 'double-opt-in-confirmation') {
       const allowed = await this.consentRepository.hasActiveConsent(phone, purpose);
@@ -59,7 +62,7 @@ export class GuardedSmsSendService {
     }
 
     const apiKey = this.getRelayApiKey();
-    if (!apiKey) {
+    if (apiKey.length === 0) {
       throw new Error('NOCTUSOFT_API_KEY is not configured');
     }
 
@@ -72,10 +75,10 @@ export class GuardedSmsSendService {
       body: JSON.stringify({ to: phone, body: brandedBody }),
     });
 
-    let parsed: RelayErrorBody & { sid?: string } = {};
+    let parsed: IRelayErrorBody & { sid?: string } = {};
     const text = await response.text();
     try {
-      parsed = JSON.parse(text) as RelayErrorBody;
+      parsed = JSON.parse(text) as IRelayErrorBody;
     } catch {
       parsed = { message: text };
     }
@@ -110,12 +113,12 @@ export class GuardedSmsSendService {
       if (parsed.code === 21610) {
         await this.consentRepository.recordOptOutAllPurposes(phone);
       }
-      const msg = parsed.message || `SMS relay failed with status ${response.status}`;
+      const msg = parsed.message ?? `SMS relay failed with status ${response.status}`;
       this.logger.error(`SMS send failed for ${phone}: ${msg}`);
       throw new Error(msg);
     }
 
-    if (messageSid) {
+    if (messageSid !== undefined && messageSid.length > 0) {
       return { messageSid };
     }
     return {};
