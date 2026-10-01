@@ -32,10 +32,10 @@ export default function EditEscalationProfilePage() {
 
   // Load profile data into form
   useEffect(() => {
-    if (profile?.data) {
-      setName(profile.data.name || '');
-      setDescription(profile.data.description || '');
-      setTiers(profile.data.tiers || []);
+    if (profile) {
+      setName(profile.name || '');
+      setDescription(profile.description || '');
+      setTiers((profile.tiers as unknown as EscalationTier[]) || []);
     }
   }, [profile]);
 
@@ -121,7 +121,7 @@ export default function EditEscalationProfilePage() {
     );
   }
 
-  if (!profile?.data) {
+  if (!profile) {
     return (
       <div className="container mx-auto max-w-4xl p-6">
         <div className="text-lg text-red-600">Profile not found</div>
@@ -133,7 +133,7 @@ export default function EditEscalationProfilePage() {
   }
 
   // Don't allow editing preset profiles
-  if (profile.data.isPreset) {
+  if (profile.isPreset) {
     return (
       <div className="container mx-auto max-w-4xl p-6">
         <div className="text-lg text-red-600">Cannot edit preset profiles</div>

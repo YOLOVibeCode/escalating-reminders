@@ -12,6 +12,7 @@ import { useMe, useUpdateProfile } from '@/lib/api-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@er/ui-components';
 import { Button, Input } from '@er/ui-components';
 import { useQueryClient } from '@tanstack/react-query';
+import { SmsOptInCheckbox } from '@/components/sms-opt-in-checkbox';
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -22,12 +23,17 @@ export default function ProfileEditPage() {
   const updateProfileMutation = useUpdateProfile();
   const [displayName, setDisplayName] = useState('');
   const [timezone, setTimezone] = useState('');
+  const [phone, setPhone] = useState('');
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.profile) {
       setDisplayName(user.profile.displayName || '');
       setTimezone(user.profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+    }
+    if (user?.phone) {
+      setPhone(user.phone);
     }
   }, [user]);
 
@@ -36,11 +42,24 @@ export default function ProfileEditPage() {
     setError(null);
 
     try {
-      const payload: { displayName?: string; timezone?: string } = {};
+      const payload: {
+        displayName?: string;
+        timezone?: string;
+        phone?: string | null;
+        smsOptIn?: boolean;
+        smsConsentSource?: string;
+      } = {};
       const display = displayName.trim();
       const tz = timezone.trim();
+      const phoneTrimmed = phone.trim();
       if (display) payload.displayName = display;
       if (tz) payload.timezone = tz;
+      if (phoneTrimmed) payload.phone = phoneTrimmed;
+      else payload.phone = null;
+      if (smsOptIn) {
+        payload.smsOptIn = true;
+        payload.smsConsentSource = '/settings/profile';
+      }
 
       await updateProfileMutation.mutateAsync(payload);
       
@@ -113,6 +132,27 @@ export default function ProfileEditPage() {
                 placeholder="Your display name"
               />
             </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                Mobile phone (optional)
+              </label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                data-testid="input-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-1"
+                placeholder="+1 555 123 4567"
+                autoComplete="tel"
+              />
+            </div>
+
+            {phone.trim() && (
+              <SmsOptInCheckbox checked={smsOptIn} onChange={setSmsOptIn} />
+            )}
 
             <div>
               <label htmlFor="timezone" className="block text-sm font-medium text-gray-700">

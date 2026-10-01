@@ -5,6 +5,7 @@ import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { AuthService } from '../auth.service';
 import { AuthRepository } from '../auth.repository';
 import { ERROR_CODES } from '@er/constants';
+import { SmsConsentRepository } from '../../sms/sms-consent.repository';
 import type { CreateUserDto, LoginDto, TokenPair } from '@er/types';
 
 describe('AuthService', () => {
@@ -52,6 +53,10 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: SmsConsentRepository,
+          useValue: { recordOptIn: jest.fn() },
         },
       ],
     }).compile();

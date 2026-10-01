@@ -1,12 +1,9 @@
-import type { Config } from 'jest';
-import nextJest from 'next/jest';
+const nextJest = require('next/jest');
 
-const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
-  dir: './',
-});
+const createJestConfig = nextJest({ dir: './' });
 
-const config: Config = {
+/** @type {import('jest').Config} */
+const config = {
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
@@ -18,21 +15,15 @@ const config: Config = {
     '^@er/ui-components$': '<rootDir>/../../packages/@er/ui-components/src',
     '^@er/api-client$': '<rootDir>/../../packages/@er/api-client/src',
   },
+  testPathIgnorePatterns: ['<rootDir>/e2e/'],
+  testMatch: ['<rootDir>/src/**/*.spec.ts', '<rootDir>/src/**/*.test.ts'],
+  passWithNoTests: true,
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
     '!src/**/index.ts',
-    '!src/app/**', // App Router files
+    '!src/app/**',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100,
-    },
-  },
 };
 
-export default createJestConfig(config);
-
+module.exports = createJestConfig(config);

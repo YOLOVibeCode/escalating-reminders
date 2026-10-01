@@ -96,6 +96,7 @@ export class AuthController {
         id: user.id,
         email: user.email,
         profile: user.profile,
+        phone: user.phone,
         subscription: user.subscription,
       },
     };
@@ -108,10 +109,35 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateProfile(
-    @Request() req: { user: { sub: string } },
-    @Body() data: { displayName?: string; timezone?: string; preferences?: Record<string, unknown> },
-  ): Promise<{ success: true; data: { displayName: string; timezone: string; preferences: Record<string, unknown> } }> {
-    const result = await this.authService.updateProfile(req.user.sub, data);
+    @Request()
+    req: {
+      user: { sub: string };
+      ip?: string;
+      headers: Record<string, string | string[] | undefined>;
+    },
+    @Body()
+    data: {
+      displayName?: string;
+      timezone?: string;
+      preferences?: Record<string, unknown>;
+      phone?: string | null;
+      smsOptIn?: boolean;
+      smsConsentSource?: string;
+    },
+  ): Promise<{
+    success: true;
+    data: {
+      displayName: string;
+      timezone: string;
+      preferences: Record<string, unknown>;
+      phone: string | null;
+    };
+  }> {
+    const userAgent = req.headers['user-agent'];
+    const context: { ip?: string; userAgent?: string } = {};
+    if (req.ip) context.ip = req.ip;
+    if (typeof userAgent === 'string') context.userAgent = userAgent;
+    const result = await this.authService.updateProfile(req.user.sub, data, context);
     return {
       success: true,
       data: result,

@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
+import { OAuthProviderService } from '../oauth-provider.service';
+import { OAuthAuthService } from '../oauth-auth.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import type { CreateUserDto, LoginDto, TokenPair, User } from '@er/types';
 
@@ -23,6 +25,8 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: mockAuthService,
         },
+        { provide: OAuthProviderService, useValue: {} },
+        { provide: OAuthAuthService, useValue: {} },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -48,6 +52,9 @@ describe('AuthController', () => {
         email: createUserDto.email,
         passwordHash: '$2b$10$hashed',
         emailVerified: false,
+        phone: null,
+        oauthProvider: null,
+        oauthProviderId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -84,6 +91,9 @@ describe('AuthController', () => {
         email: loginDto.email,
         passwordHash: '$2b$10$hashed',
         emailVerified: false,
+        phone: null,
+        oauthProvider: null,
+        oauthProviderId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

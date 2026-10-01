@@ -156,7 +156,7 @@ test.describe('Layer 1: Authentication Tests', () => {
     const oauthButton = page.locator('[data-testid="oauth-google-button"], button:has-text("Google")').first();
     
     if (!(await oauthButton.isVisible().catch(() => false))) {
-      test.skip('OAuth button not visible - OAuth may not be configured');
+      test.skip(true, 'OAuth button not visible - OAuth may not be configured');
       return;
     }
 

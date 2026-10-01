@@ -27,7 +27,11 @@ async function bootstrap(): Promise<void> {
   // API prefix
   // Keep a few top-level endpoints (like /health) outside the /v1 prefix for tooling/E2E.
   app.setGlobalPrefix('v1', {
-    exclude: [{ path: 'health', method: RequestMethod.GET }],
+    exclude: [
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'webhooks/sms', method: RequestMethod.POST },
+      { path: 'webhooks/sms-status', method: RequestMethod.POST },
+    ],
   });
 
   // Swagger documentation

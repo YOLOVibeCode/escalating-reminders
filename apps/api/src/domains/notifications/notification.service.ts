@@ -12,6 +12,9 @@ import type {
 } from '@er/interfaces';
 import type { NotificationLog, NotificationStatus } from '@er/types';
 import { v4 as uuid } from 'uuid';
+import { GuardedSmsSendService } from '../sms/guarded-sms-send.service';
+import { SmsConsentRepository } from '../sms/sms-consent.repository';
+import { SMS_PURPOSE } from '../sms/sms-compliance.constants';
 
 /**
  * Notification service.
@@ -29,6 +32,8 @@ export class NotificationService implements INotificationService {
     private readonly agentExecutionService: AgentExecutionService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly guardedSmsSend: GuardedSmsSendService,
+    private readonly smsConsentRepository: SmsConsentRepository,
   ) {}
 
   private getUsageSuspensionWindowDays(): number {
@@ -286,7 +291,55 @@ export class NotificationService implements INotificationService {
       }
     }
 
+    if (tierConfig.includeTrustedContacts) {
+      await this.sendTrustedContactSms(userId, reminder, tier, tierConfig);
+    }
+
     return notificationLogs;
+  }
+
+  private async sendTrustedContactSms(
+    userId: string,
+    reminder: { id: string; title: string; description: string | null },
+    tier: number,
+    tierConfig: { message?: string },
+  ): Promise<void> {
+    const contacts = await this.prisma.trustedContact.findMany({
+      where: { userId },
+    });
+
+    for (const contact of contacts) {
+      const prefs = contact.notificationPreferences as { sms?: boolean };
+      if (!prefs.sms || !contact.phone) {
+        continue;
+      }
+      const hasConsent = await this.smsConsentRepository.hasActiveConsent(
+        contact.phone,
+        SMS_PURPOSE,
+      );
+      if (!hasConsent) {
+        continue;
+      }
+
+      const message =
+        tierConfig.message || reminder.description || reminder.title;
+      const body = `Trusted contact alert (tier ${tier}): ${reminder.title}\n${message}`;
+
+      try {
+        await this.guardedSmsSend.send({
+          phone: contact.phone,
+          body,
+          purpose: SMS_PURPOSE,
+          metadata: { trustedContactId: contact.id, reminderId: reminder.id },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Trusted contact SMS failed for ${contact.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
   }
 
   async sendNotification(

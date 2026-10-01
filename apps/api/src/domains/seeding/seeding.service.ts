@@ -331,6 +331,25 @@ export class SeedingService {
         },
       },
       {
+        type: 'sms',
+        name: 'SMS',
+        description: 'Send notifications via SMS',
+        version: '1.0.0',
+        author: 'Escalating Reminders',
+        isOfficial: true,
+        isVerified: true,
+        minimumTier: 'FREE',
+        capabilities: {
+          canPush: true,
+          canPull: false,
+          canReceiveCommands: true,
+          supportedActions: ['snooze', 'dismiss', 'complete'],
+        },
+        configurationSchema: {
+          fields: [],
+        },
+      },
+      {
         type: 'webhook',
         name: 'Webhook',
         description: 'Send notifications via webhook',

@@ -8,13 +8,14 @@ import { ReminderModule } from '../reminders/reminder.module';
 import { EscalationModule } from '../escalation/escalation.module';
 import { AgentModule } from '../agents/agent.module';
 import { AuthModule } from '../auth/auth.module';
+import { SmsModule } from '../sms/sms.module';
 
 /**
  * Notification module.
  * Provides notification delivery and query functionality.
  */
 @Module({
-  imports: [DatabaseModule, ReminderModule, EscalationModule, AgentModule, AuthModule],
+  imports: [DatabaseModule, ReminderModule, EscalationModule, AgentModule, AuthModule, SmsModule],
   controllers: [NotificationController],
   providers: [NotificationService, NotificationRepository, NotificationQueryService],
   exports: [NotificationService, NotificationQueryService],

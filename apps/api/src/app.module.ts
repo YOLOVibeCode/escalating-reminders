@@ -23,6 +23,10 @@ import { AdminModule } from './domains/admin/admin.module';
 import { SeedingModule } from './domains/seeding/seeding.module';
 import { HealthController } from './health.controller';
 import { StoreWebhookController } from './webhooks/store-webhook.controller';
+import { SmsInboundController } from './webhooks/sms-inbound.controller';
+import { SmsStatusController } from './webhooks/sms-status.controller';
+import { SmsModule } from './domains/sms/sms.module';
+import { TrustedContactModule } from './domains/trusted-contacts/trusted-contact.module';
 
 // Workers
 import { ReminderTriggerJob } from './workers/jobs/reminder-trigger-job';
@@ -55,8 +59,10 @@ import { EscalationProcessor } from './workers/processors/escalation-processor';
     NotificationModule,
     AdminModule,
     SeedingModule,
+    SmsModule,
+    TrustedContactModule,
   ],
-  controllers: [HealthController, StoreWebhookController],
+  controllers: [HealthController, StoreWebhookController, SmsInboundController, SmsStatusController],
   providers: [
     {
       provide: APP_FILTER,

@@ -6,6 +6,8 @@ import { ReminderRepository } from '../../reminders/reminder.repository';
 import { EscalationProfileRepository } from '../../escalation/escalation-profile.repository';
 import { AgentExecutionService } from '../../agents/agent-execution.service';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { GuardedSmsSendService } from '../../sms/guarded-sms-send.service';
+import { SmsConsentRepository } from '../../sms/sms-consent.repository';
 import type {
   Reminder,
   EscalationProfile,
@@ -47,6 +49,17 @@ describe('NotificationService', () => {
       upsert: jest.fn(),
       deleteMany: jest.fn(),
     },
+    trustedContact: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  };
+
+  const mockGuardedSmsSend = {
+    send: jest.fn(),
+  };
+
+  const mockSmsConsentRepository = {
+    hasActiveConsent: jest.fn().mockResolvedValue(false),
   };
 
   const mockConfigService = {
@@ -80,6 +93,14 @@ describe('NotificationService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: GuardedSmsSendService,
+          useValue: mockGuardedSmsSend,
+        },
+        {
+          provide: SmsConsentRepository,
+          useValue: mockSmsConsentRepository,
         },
       ],
     }).compile();

@@ -7,6 +7,10 @@ import { ERROR_CODES } from '@er/constants';
 import type { IAuthService } from '@er/interfaces';
 import type { CreateUserDto, LoginDto, TokenPair, AccessTokenPayload, RefreshTokenPayload, User } from '@er/types';
 import { NotFoundError } from '../../common/exceptions';
+import { ValidationError } from '../../common/exceptions/validation.exception';
+import { SmsConsentRepository } from '../sms/sms-consent.repository';
+import { parseToE164 } from '../sms/phone.util';
+import { SMS_CONSENT_TEXT_VERSION, SMS_PURPOSE } from '../sms/sms-compliance.constants';
 
 /**
  * Auth service.
@@ -19,6 +23,7 @@ export class AuthService implements IAuthService {
     private readonly repository: AuthRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly smsConsentRepository: SmsConsentRepository,
   ) {}
 
   async register(dto: CreateUserDto): Promise<{ user: User; tokens: TokenPair }> {
@@ -211,26 +216,77 @@ export class AuthService implements IAuthService {
    */
   async updateProfile(
     userId: string,
-    data: { displayName?: string; timezone?: string; preferences?: Record<string, unknown> },
-  ): Promise<{ displayName: string; timezone: string; preferences: Record<string, unknown> }> {
-    // Verify user exists
+    data: {
+      displayName?: string;
+      timezone?: string;
+      preferences?: Record<string, unknown>;
+      phone?: string | null;
+      smsOptIn?: boolean;
+      smsConsentSource?: string;
+    },
+    context?: { ip?: string; userAgent?: string },
+  ): Promise<{
+    displayName: string;
+    timezone: string;
+    preferences: Record<string, unknown>;
+    phone: string | null;
+  }> {
     const user = await this.repository.findById(userId);
     if (!user) {
       throw new NotFoundError(`User with ID ${userId} not found`);
     }
 
-    // Update or create profile
-    const update: any = {};
+    if (data.smsOptIn === true && !data.phone) {
+      throw new ValidationError('Phone number is required to opt in to SMS');
+    }
+
+    let normalizedPhone: string | null | undefined;
+    if (data.phone !== undefined) {
+      normalizedPhone = data.phone ? parseToE164(data.phone) : null;
+      await this.repository.update(userId, { phone: normalizedPhone });
+    } else {
+      normalizedPhone = user.phone ?? null;
+    }
+
+    const update: {
+      displayName?: string;
+      timezone?: string;
+      preferences?: Record<string, unknown>;
+    } = {};
     if (data.displayName !== undefined) update.displayName = data.displayName;
     if (data.timezone !== undefined) update.timezone = data.timezone;
     if (data.preferences !== undefined) update.preferences = data.preferences;
 
     const profile = await this.repository.updateProfile(userId, update);
 
+    if (data.smsOptIn === true && normalizedPhone) {
+      const consentInput: {
+        phone: string;
+        purpose: string;
+        consentTextVersion: string;
+        source: string;
+        consentedAt: Date;
+        ip?: string;
+        userAgent?: string;
+      } = {
+        phone: normalizedPhone,
+        purpose: SMS_PURPOSE,
+        consentTextVersion: SMS_CONSENT_TEXT_VERSION,
+        source: data.smsConsentSource || '/settings/profile',
+        consentedAt: new Date(),
+      };
+      if (context?.ip) consentInput.ip = context.ip;
+      if (context?.userAgent) consentInput.userAgent = context.userAgent;
+      await this.smsConsentRepository.recordOptIn(consentInput);
+    }
+
+    const refreshed = await this.repository.findById(userId);
+
     return {
       displayName: profile.displayName,
       timezone: profile.timezone,
       preferences: profile.preferences as Record<string, unknown>,
+      phone: refreshed?.phone ?? null,
     };
   }
 

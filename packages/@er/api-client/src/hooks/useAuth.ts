@@ -86,8 +86,16 @@ export function createAuthHooks(client: ApiClient) {
         displayName?: string;
         timezone?: string;
         preferences?: Record<string, unknown>;
+        phone?: string | null;
+        smsOptIn?: boolean;
+        smsConsentSource?: string;
       }) => {
-        return client.patch<{ displayName: string; timezone: string; preferences: Record<string, unknown> }>('/auth/me', data);
+        return client.patch<{
+          displayName: string;
+          timezone: string;
+          preferences: Record<string, unknown>;
+          phone: string | null;
+        }>('/auth/me', data);
       },
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });

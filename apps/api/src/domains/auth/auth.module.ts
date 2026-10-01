@@ -8,6 +8,8 @@ import { AuthRepository } from './auth.repository';
 import { OAuthProviderService } from './oauth-provider.service';
 import { OAuthAuthService } from './oauth-auth.service';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
+import { DatabaseModule } from '../../infrastructure/database/database.module';
+import { SmsModule } from '../sms/sms.module';
 
 /**
  * Auth module.
@@ -15,6 +17,8 @@ import { JwtStrategy } from '../../common/strategies/jwt.strategy';
  */
 @Module({
   imports: [
+    DatabaseModule,
+    SmsModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -92,6 +92,20 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Trusted Contacts</CardTitle>
+          <CardDescription>People who can receive escalation alerts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/settings/trusted-contacts">
+            <Button variant="outline" data-testid="btn-manage-trusted-contacts">
+              Manage Trusted Contacts
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
       {/* Escalation Profiles Section */}
       <Card>
         <CardHeader>

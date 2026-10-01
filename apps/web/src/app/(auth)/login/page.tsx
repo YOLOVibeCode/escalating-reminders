@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useLogin, apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input } from '@er/ui-components';
+import { PublicFooter } from '@/components/public-footer';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -65,7 +66,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex flex-1 items-center justify-center">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
         <div>
           <h2 className="text-center text-3xl font-bold text-gray-900">Sign in</h2>
@@ -176,6 +178,8 @@ export default function LoginPage() {
           </div>
         </form>
       </div>
+      </div>
+      <PublicFooter />
     </div>
   );
 }
