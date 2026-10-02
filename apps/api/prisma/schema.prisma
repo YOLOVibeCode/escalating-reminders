@@ -32,6 +32,7 @@ model User {
   // OAuth fields
   oauthProvider OAuthProvider? @map("oauth_provider")
   oauthProviderId String?      @map("oauth_provider_id") // Provider's user ID
+  phone         String?
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
@@ -74,7 +75,7 @@ model TrustedContact {
   email                   String?
   phone                   String?
   relationship            String
-  notificationPreferences Json     @default("{\"email\": true, \"sms\": true}") @map("notification_preferences")
+  notificationPreferences Json     @default("{\"email\": true, \"sms\": false}") @map("notification_preferences")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
@@ -83,6 +84,48 @@ model TrustedContact {
 
   @@index([userId])
   @@map("trusted_contacts")
+}
+
+model SmsConsent {
+  id                 String    @id @default(uuid())
+  phone              String
+  purpose            String
+  consentTextVersion String    @map("consent_text_version")
+  source             String
+  ip                 String?
+  userAgent          String?   @map("user_agent")
+  consentedAt        DateTime? @map("consented_at")
+  revokedAt          DateTime? @map("revoked_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@unique([phone, purpose])
+  @@index([phone])
+  @@map("sms_consents")
+}
+
+enum SmsMessageDirection {
+  OUTBOUND
+  INBOUND
+}
+
+model SmsMessageLog {
+  id                String              @id @default(uuid())
+  phone             String
+  body              String
+  direction         SmsMessageDirection @default(OUTBOUND)
+  relayHttpStatus   Int?                @map("relay_http_status")
+  relayErrorCode    Int?                @map("relay_error_code")
+  relayErrorMessage String?             @map("relay_error_message")
+  twilioMessageSid  String?             @unique @map("twilio_message_sid")
+  messageStatus     String?             @map("message_status")
+  errorCode         String?             @map("error_code")
+  metadata          Json                @default("{}")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  @@index([phone])
+  @@map("sms_message_logs")
 }
 
 model ApiKey {

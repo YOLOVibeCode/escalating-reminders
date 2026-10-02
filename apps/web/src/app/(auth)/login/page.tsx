@@ -5,11 +5,15 @@
 
 'use client';
 
-import { useState } from 'react';
+import { Button, Input } from '@er/ui-components';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { PublicFooter } from '@/components/public-footer';
 import { useLogin, apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/auth-store';
-import { Button, Input } from '@er/ui-components';
+
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -65,7 +69,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <div className="flex flex-1 items-center justify-center">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
         <div>
           <h2 className="text-center text-3xl font-bold text-gray-900">Sign in</h2>
@@ -74,8 +79,14 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit} data-testid="login-form">
-          {error && (
+        <form
+          className="mt-8 space-y-6"
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          data-testid="login-form"
+        >
+          {error !== null && (
             <div className="rounded-md bg-red-50 p-4" data-testid="login-error" role="alert">
               <p className="text-sm text-red-800">{error}</p>
             </div>
@@ -94,7 +105,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); }}
                 className="mt-1"
                 placeholder="you@example.com"
               />
@@ -112,7 +123,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); }}
                 className="mt-1"
                 placeholder="••••••••"
               />
@@ -145,7 +156,9 @@ export default function LoginPage() {
               variant="outline"
               className="w-full"
               data-testid="oauth-google-button"
-              onClick={() => handleOAuthLogin('GOOGLE')}
+              onClick={() => {
+                void handleOAuthLogin('GOOGLE');
+              }}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path
@@ -171,11 +184,13 @@ export default function LoginPage() {
 
           <div className="text-center text-sm">
             <a href="/register" className="font-medium text-blue-600 hover:text-blue-500" data-testid="register-link">
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </a>
           </div>
         </form>
       </div>
+      </div>
+      <PublicFooter />
     </div>
   );
 }

@@ -1,17 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { NotificationRepository } from './notification.repository';
-import { ReminderRepository } from '../reminders/reminder.repository';
-import { EscalationProfileRepository } from '../escalation/escalation-profile.repository';
-import { AgentExecutionService } from '../agents/agent-execution.service';
-import { NotFoundError } from '../../common/exceptions';
-import { PrismaService } from '../../infrastructure/database/prisma.service';
 import type {
   INotificationService,
   NotificationPayload,
 } from '@er/interfaces';
 import type { NotificationLog, NotificationStatus } from '@er/types';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
+
+import { NotificationRepository } from './notification.repository';
+import { NotFoundError } from '../../common/exceptions';
+import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { AgentExecutionService } from '../agents/agent-execution.service';
+import { EscalationProfileRepository } from '../escalation/escalation-profile.repository';
+import { ReminderRepository } from '../reminders/reminder.repository';
+import { GuardedSmsSendService } from '../sms/guarded-sms-send.service';
+import { SMS_PURPOSE } from '../sms/sms-compliance.constants';
+import { SmsConsentRepository } from '../sms/sms-consent.repository';
 
 /**
  * Notification service.
@@ -29,16 +33,18 @@ export class NotificationService implements INotificationService {
     private readonly agentExecutionService: AgentExecutionService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly guardedSmsSend: GuardedSmsSendService,
+    private readonly smsConsentRepository: SmsConsentRepository,
   ) {}
 
   private getUsageSuspensionWindowDays(): number {
-    const raw = this.configService.get<string>('USAGE_SUSPENSION_WINDOW_DAYS') || '3';
+    const raw = this.configService.get<string>('USAGE_SUSPENSION_WINDOW_DAYS') ?? '3';
     const n = Number(raw);
     return Number.isFinite(n) && n > 0 ? n : 3;
   }
 
   private getUsageSuspensionAllowancePerWindow(): number {
-    const raw = this.configService.get<string>('USAGE_SUSPENSION_ALLOWANCE_PER_WINDOW') || '3';
+    const raw = this.configService.get<string>('USAGE_SUSPENSION_ALLOWANCE_PER_WINDOW') ?? '3';
     const n = Number(raw);
     return Number.isFinite(n) && n >= 0 ? n : 3;
   }
@@ -163,12 +169,12 @@ export class NotificationService implements INotificationService {
     }
 
     // 3. Get tier configuration
-    const tiers = profile.tiers as Array<{
+    const tiers = profile.tiers as {
       tierNumber: number;
       agentIds: string[];
       includeTrustedContacts: boolean;
       message?: string;
-    }>;
+    }[];
 
     const tierConfig = tiers.find((t) => t.tierNumber === tier);
     if (!tierConfig) {
@@ -218,8 +224,8 @@ export class NotificationService implements INotificationService {
           reminderId,
           title: reminder.title,
           message:
-            tierConfig.message ||
-            reminder.description ||
+            tierConfig.message ??
+            reminder.description ??
             reminder.title,
           escalationTier: tier,
           importance: reminder.importance,
@@ -250,8 +256,12 @@ export class NotificationService implements INotificationService {
           status: (sendResult.success ? 'DELIVERED' : 'FAILED') as NotificationStatus,
           metadata: payload as unknown,
           sentAt: new Date(),
-          ...(sendResult.deliveredAt ? { deliveredAt: sendResult.deliveredAt } : {}),
-          ...(sendResult.error ? { failureReason: sendResult.error } : {}),
+          ...(sendResult.deliveredAt !== undefined
+            ? { deliveredAt: sendResult.deliveredAt }
+            : {}),
+          ...(sendResult.error !== undefined && sendResult.error !== ''
+            ? { failureReason: sendResult.error }
+            : {}),
         });
 
         notificationLogs.push(notificationLog);
@@ -286,7 +296,55 @@ export class NotificationService implements INotificationService {
       }
     }
 
+    if (tierConfig.includeTrustedContacts) {
+      await this.sendTrustedContactSms(userId, reminder, tier, tierConfig);
+    }
+
     return notificationLogs;
+  }
+
+  private async sendTrustedContactSms(
+    userId: string,
+    reminder: { id: string; title: string; description: string | null },
+    tier: number,
+    tierConfig: { message?: string },
+  ): Promise<void> {
+    const contacts = await this.prisma.trustedContact.findMany({
+      where: { userId },
+    });
+
+    for (const contact of contacts) {
+      const prefs = contact.notificationPreferences as { sms?: boolean };
+      if (prefs.sms !== true || contact.phone === null || contact.phone === '') {
+        continue;
+      }
+      const hasConsent = await this.smsConsentRepository.hasActiveConsent(
+        contact.phone,
+        SMS_PURPOSE,
+      );
+      if (!hasConsent) {
+        continue;
+      }
+
+      const message =
+        tierConfig.message ?? reminder.description ?? reminder.title;
+      const body = `Trusted contact alert (tier ${tier}): ${reminder.title}\n${message}`;
+
+      try {
+        await this.guardedSmsSend.send({
+          phone: contact.phone,
+          body,
+          purpose: SMS_PURPOSE,
+          metadata: { trustedContactId: contact.id, reminderId: reminder.id },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Trusted contact SMS failed for ${contact.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
   }
 
   async sendNotification(
@@ -345,8 +403,10 @@ export class NotificationService implements INotificationService {
       status: (sendResult.success ? 'DELIVERED' : 'FAILED') as NotificationStatus,
       metadata: payload as unknown,
       sentAt: new Date(),
-      ...(sendResult.deliveredAt ? { deliveredAt: sendResult.deliveredAt } : {}),
-      ...(sendResult.error ? { failureReason: sendResult.error } : {}),
+      ...(sendResult.deliveredAt !== undefined ? { deliveredAt: sendResult.deliveredAt } : {}),
+      ...(sendResult.error !== undefined && sendResult.error !== ''
+        ? { failureReason: sendResult.error }
+        : {}),
     });
 
     if (!sendResult.success) {

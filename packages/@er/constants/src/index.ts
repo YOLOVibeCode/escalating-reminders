@@ -10,4 +10,5 @@ export * from './error-codes';
 export * from './escalation-presets';
 export * from './rate-limits';
 export * from './regex-patterns';
+export * from './sms-compliance';
 

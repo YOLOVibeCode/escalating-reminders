@@ -1,6 +1,7 @@
-import { NestFactory } from '@nestjs/core';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -20,14 +21,18 @@ async function bootstrap(): Promise<void> {
 
   // CORS
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3800',
+    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3800',
     credentials: true,
   });
 
   // API prefix
   // Keep a few top-level endpoints (like /health) outside the /v1 prefix for tooling/E2E.
   app.setGlobalPrefix('v1', {
-    exclude: [{ path: 'health', method: RequestMethod.GET }],
+    exclude: [
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'webhooks/sms', method: RequestMethod.POST },
+      { path: 'webhooks/sms-status', method: RequestMethod.POST },
+    ],
   });
 
   // Swagger documentation
@@ -48,7 +53,7 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3801;
+  const port = process.env.PORT ?? 3801;
   await app.listen(port);
 
   console.log(`🚀 API server running on http://localhost:${port}`);

@@ -1,22 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { NotificationService } from '../notification.service';
-import { NotificationRepository } from '../notification.repository';
-import { ReminderRepository } from '../../reminders/reminder.repository';
-import { EscalationProfileRepository } from '../../escalation/escalation-profile.repository';
-import { AgentExecutionService } from '../../agents/agent-execution.service';
-import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import type { NotificationPayload } from '@er/interfaces';
 import type {
   Reminder,
   EscalationProfile,
 } from '@er/types';
+import { ConfigService } from '@nestjs/config';
+import { Test, TestingModule } from '@nestjs/testing';
+
+import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { AgentExecutionService } from '../../agents/agent-execution.service';
+import { EscalationProfileRepository } from '../../escalation/escalation-profile.repository';
+import { ReminderRepository } from '../../reminders/reminder.repository';
+import { GuardedSmsSendService } from '../../sms/guarded-sms-send.service';
+import { SmsConsentRepository } from '../../sms/sms-consent.repository';
+import { NotificationRepository } from '../notification.repository';
+import { NotificationService } from '../notification.service';
+
 
 describe('NotificationService', () => {
   let service: NotificationService;
-  let notificationRepository: NotificationRepository;
-  let reminderRepository: ReminderRepository;
-  let escalationProfileRepository: EscalationProfileRepository;
-  let agentExecutionService: AgentExecutionService;
 
   const mockNotificationRepository = {
     create: jest.fn(),
@@ -47,6 +48,17 @@ describe('NotificationService', () => {
       upsert: jest.fn(),
       deleteMany: jest.fn(),
     },
+    trustedContact: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  };
+
+  const mockGuardedSmsSend = {
+    send: jest.fn(),
+  };
+
+  const mockSmsConsentRepository = {
+    hasActiveConsent: jest.fn().mockResolvedValue(false),
   };
 
   const mockConfigService = {
@@ -81,20 +93,18 @@ describe('NotificationService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        {
+          provide: GuardedSmsSendService,
+          useValue: mockGuardedSmsSend,
+        },
+        {
+          provide: SmsConsentRepository,
+          useValue: mockSmsConsentRepository,
+        },
       ],
     }).compile();
 
     service = module.get<NotificationService>(NotificationService);
-    notificationRepository = module.get<NotificationRepository>(
-      NotificationRepository,
-    );
-    reminderRepository = module.get<ReminderRepository>(ReminderRepository);
-    escalationProfileRepository = module.get<EscalationProfileRepository>(
-      EscalationProfileRepository,
-    );
-    agentExecutionService = module.get<AgentExecutionService>(
-      AgentExecutionService,
-    );
 
     jest.clearAllMocks();
 
@@ -218,7 +228,7 @@ describe('NotificationService', () => {
 
   describe('sendNotification', () => {
     it('should send a single notification via agent', async () => {
-      const payload = {
+      const payload: NotificationPayload = {
         notificationId: 'notif_123',
         userId: 'user_123',
         reminderId: 'reminder_123',
@@ -227,6 +237,7 @@ describe('NotificationService', () => {
         escalationTier: 1,
         importance: 'MEDIUM',
         actions: [],
+        metadata: {},
       };
 
       mockAgentExecutionService.execute.mockResolvedValue({
@@ -253,7 +264,7 @@ describe('NotificationService', () => {
         'user_123',
         'reminder_123',
         'webhook',
-        payload as any,
+        payload,
       );
 
       expect(result).toBeDefined();
@@ -296,11 +307,16 @@ describe('NotificationService', () => {
 
       expect(mockNotificationRepository.update).toHaveBeenCalledWith(
         'notif_123',
-        {
+        expect.objectContaining({
           status: 'DELIVERED',
-          deliveredAt: expect.any(Date),
-        },
+        }),
       );
+      const updateCalls = mockNotificationRepository.update.mock.calls as [
+        string,
+        { deliveredAt?: Date },
+      ][];
+      const updateArg = updateCalls[0]?.[1];
+      expect(updateArg?.deliveredAt).toBeInstanceOf(Date);
     });
   });
 });
