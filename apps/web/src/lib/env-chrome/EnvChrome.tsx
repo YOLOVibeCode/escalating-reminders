@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { applyEnvChrome, envFromHost, type AppEnv, type HostRule } from './chrome';
+import { HOST_RULES } from '@/env-chrome.config';
+
+import { applyEnvChrome, envFromHost, type AppEnv } from './chrome';
 
 /**
  * Mount once in `app/layout.tsx`. Renders no DOM itself — it applies the
@@ -11,18 +13,12 @@ import { applyEnvChrome, envFromHost, type AppEnv, type HostRule } from './chrom
  * do an instant hostname guess before hydration for zero-flicker first paint,
  * then reconcile if the server disagrees.
  */
-export function EnvChrome({
-  env,
-  hostRules,
-}: {
-  env: AppEnv;
-  hostRules: readonly HostRule[];
-}): null {
+export function EnvChrome({ env }: { env: AppEnv }): null {
   useEffect(() => {
-    const instant = envFromHost(location.hostname, hostRules);
+    const instant = envFromHost(location.hostname, HOST_RULES);
     applyEnvChrome(instant);
     if (env !== instant) applyEnvChrome(env);
-  }, [env, hostRules]);
+  }, [env]);
 
   return null;
 }

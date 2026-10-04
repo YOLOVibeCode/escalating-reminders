@@ -4,7 +4,6 @@ import { QueryProvider } from '@/components/providers/query-provider';
 import { EnvChrome } from '@/lib/env-chrome/EnvChrome';
 import { badgeFor } from '@/lib/env-chrome/chrome';
 import { resolveServerEnv } from '@/lib/env-chrome/resolve';
-import { HOST_RULES } from '@/env-chrome.config';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -34,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <EnvChrome env={env} hostRules={HOST_RULES} />
+        <EnvChrome env={env} />
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
