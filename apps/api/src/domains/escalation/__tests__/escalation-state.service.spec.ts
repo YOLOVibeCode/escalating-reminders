@@ -211,6 +211,28 @@ describe('EscalationStateService', () => {
       expect(result.status).toBe('EXPIRED');
     });
 
+    it('leaves an acknowledged escalation where it is', async () => {
+      const acknowledged: EscalationState = {
+        id: 'state_123',
+        reminderId: 'reminder_123',
+        profileId: 'profile_123',
+        currentTier: 1,
+        startedAt: new Date(),
+        lastEscalatedAt: null,
+        acknowledgedAt: new Date(),
+        acknowledgedBy: 'user_1',
+        status: 'ACKNOWLEDGED',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockStateRepository.findByReminderId.mockResolvedValue(acknowledged);
+
+      const result = await service.advance('reminder_123');
+
+      expect(result).toBe(acknowledged);
+      expect(mockStateRepository.update).not.toHaveBeenCalled();
+    });
+
     it('should throw NotFoundError if state does not exist', async () => {
       mockStateRepository.findByReminderId.mockResolvedValue(null);
 
@@ -309,7 +331,8 @@ describe('EscalationStateService', () => {
         name: 'Test',
         isPreset: true,
         tiers: [
-          { tierNumber: 1, delayMinutes: 5 }, // 5 minutes delay
+          { tierNumber: 1, delayMinutes: 0 },
+          { tierNumber: 2, delayMinutes: 5 }, // sent 5 minutes after tier 1
         ],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -320,7 +343,60 @@ describe('EscalationStateService', () => {
 
       const result = await service.findDueForAdvancement(10);
 
-      expect(result.length).toBeGreaterThan(0);
+      expect(result.map((s) => s.id)).toEqual(['state_1']);
+    });
+
+    const stateAt = (tier: number, minutesAgo: number): EscalationState => ({
+      id: `state_t${tier}`,
+      reminderId: 'reminder_1',
+      profileId: 'profile_123',
+      currentTier: tier,
+      startedAt: new Date(Date.now() - minutesAgo * 60 * 1000),
+      lastEscalatedAt: null,
+      acknowledgedAt: null,
+      acknowledgedBy: null,
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const profileWith = (tiers: Array<{ tierNumber: number; delayMinutes: number }>): EscalationProfile => ({
+      id: 'profile_123',
+      userId: null,
+      name: 'Test',
+      isPreset: true,
+      tiers,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    it('waits for the next tier\'s delay, not the current tier\'s', async () => {
+      // Tier 1 has no delay; tier 2 waits 60 minutes. One minute in, nothing is due.
+      mockStateRepository.findDueForAdvancement.mockResolvedValue([stateAt(1, 1)]);
+      mockProfileRepository.findById.mockResolvedValue(
+        profileWith([{ tierNumber: 1, delayMinutes: 0 }, { tierNumber: 2, delayMinutes: 60 }]),
+      );
+
+      expect(await service.findDueForAdvancement(10)).toEqual([]);
+    });
+
+    it('counts a pass that lands a few seconds before the due time', async () => {
+      // Started 1 minute minus 2 s ago; tier 2 is due 1 minute after start.
+      const state = { ...stateAt(1, 0), startedAt: new Date(Date.now() - 58 * 1000) };
+      mockStateRepository.findDueForAdvancement.mockResolvedValue([state]);
+      mockProfileRepository.findById.mockResolvedValue(
+        profileWith([{ tierNumber: 1, delayMinutes: 0 }, { tierNumber: 2, delayMinutes: 1 }]),
+      );
+
+      expect(await service.findDueForAdvancement(10)).toHaveLength(1);
+    });
+
+    it('does not return an escalation already at its last tier', async () => {
+      mockStateRepository.findDueForAdvancement.mockResolvedValue([stateAt(2, 120)]);
+      mockProfileRepository.findById.mockResolvedValue(
+        profileWith([{ tierNumber: 1, delayMinutes: 0 }, { tierNumber: 2, delayMinutes: 5 }]),
+      );
+
+      expect(await service.findDueForAdvancement(10)).toEqual([]);
     });
   });
 });

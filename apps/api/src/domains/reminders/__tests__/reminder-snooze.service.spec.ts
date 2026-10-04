@@ -35,6 +35,9 @@ describe('ReminderSnoozeService', () => {
       findFirst: jest.fn(),
       delete: jest.fn(),
     },
+    escalationState: {
+      deleteMany: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -114,6 +117,10 @@ describe('ReminderSnoozeService', () => {
           nextTriggerAt: snoozeUntil,
         },
       });
+      // Snoozing pauses the escalation so it restarts at tier 1 when the snooze ends.
+      expect(mockPrismaService.escalationState.deleteMany).toHaveBeenCalledWith({
+        where: { reminderId },
+      });
     });
 
     it('should throw NotFoundError if reminder does not exist', async () => {
@@ -178,7 +185,7 @@ describe('ReminderSnoozeService', () => {
       });
       expect(mockPrismaService.reminder.update).toHaveBeenCalledWith({
         where: { id: reminderId },
-        data: { status: 'ACTIVE' },
+        data: { status: 'ACTIVE', nextTriggerAt: expect.any(Date) },
       });
     });
 

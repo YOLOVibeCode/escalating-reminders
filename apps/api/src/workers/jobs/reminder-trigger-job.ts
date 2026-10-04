@@ -35,27 +35,40 @@ export class ReminderTriggerJob {
 
       // Queue each reminder for processing
       for (const reminder of dueReminders) {
-        await this.queueService.add(
-          'high-priority',
-          'reminder.trigger',
-          {
-            reminderId: reminder.id,
-            userId: reminder.userId,
-            title: reminder.title,
-            importance: reminder.importance,
-            escalationProfileId: reminder.escalationProfileId,
-            triggeredAt: new Date(),
-          },
-          {
-            attempts: 3,
-            backoffDelay: 2000,
-          },
-        );
-
-        // Update reminder's lastTriggeredAt
+        // Consume this occurrence before queueing, so the next scheduler pass does not fire it
+        // again, and wake a snoozed reminder so the processor sees it ACTIVE.
+        // Schedules are not persisted yet, so every reminder is effectively one-shot.
         await this.reminderRepository.update(reminder.id, {
+          status: 'ACTIVE',
+          nextTriggerAt: null,
           lastTriggeredAt: new Date(),
         });
+
+        try {
+          await this.queueService.add(
+            'high-priority',
+            'reminder.trigger',
+            {
+              reminderId: reminder.id,
+              userId: reminder.userId,
+              title: reminder.title,
+              importance: reminder.importance,
+              escalationProfileId: reminder.escalationProfileId,
+              triggeredAt: new Date(),
+            },
+            {
+              attempts: 3,
+              backoffDelay: 2000,
+            },
+          );
+        } catch (error) {
+          // Put the occurrence back so the next pass retries it.
+          await this.reminderRepository.update(reminder.id, {
+            status: reminder.status,
+            nextTriggerAt: reminder.nextTriggerAt,
+          });
+          throw error;
+        }
 
         this.logger.debug(`Queued reminder ${reminder.id} for triggering`);
       }
@@ -67,4 +80,3 @@ export class ReminderTriggerJob {
     }
   }
 }
-
