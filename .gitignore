@@ -52,3 +52,6 @@ apps/api/prisma/migrations/*.sql
 *.tmp
 *.temp
 
+
+# TypeScript incremental build cache
+*.tsbuildinfo
