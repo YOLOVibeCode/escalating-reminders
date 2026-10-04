@@ -3,19 +3,24 @@
  * Following TDD - tests written before implementation.
  */
 
-import { Test, TestingModule } from '@nestjs/testing';
+import type { User, UserProfile } from '@er/types';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { AuthService } from '../auth.service';
-import { AuthRepository } from '../auth.repository';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { NotFoundError } from '../../../common/exceptions';
-import type { User, UserProfile } from '@er/types';
+import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { SmsConsentRepository } from '../../sms/sms-consent.repository';
+import { AuthRepository } from '../auth.repository';
+import { AuthService } from '../auth.service';
+
 
 describe('AuthService - Profile Update', () => {
   let service: AuthService;
-  let repository: AuthRepository;
-  let prismaService: PrismaService;
+
+  const mockSmsConsentRepository = {
+    recordOptIn: jest.fn(),
+  };
 
   const mockPrismaService = {
     user: {
@@ -57,12 +62,14 @@ describe('AuthService - Profile Update', () => {
             verify: jest.fn(),
           },
         },
+        {
+          provide: SmsConsentRepository,
+          useValue: mockSmsConsentRepository,
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    repository = module.get<AuthRepository>(AuthRepository);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -76,6 +83,7 @@ describe('AuthService - Profile Update', () => {
       email: 'test@example.com',
       passwordHash: 'hashed',
       emailVerified: false,
+      phone: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -91,10 +99,7 @@ describe('AuthService - Profile Update', () => {
     };
 
     it('should update user profile successfully', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        profile: mockProfile,
-      });
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.userProfile.upsert.mockResolvedValue({
         ...mockProfile,
         displayName: 'Jane Doe',
@@ -108,6 +113,7 @@ describe('AuthService - Profile Update', () => {
 
       expect(result.displayName).toBe('Jane Doe');
       expect(result.timezone).toBe('America/Los_Angeles');
+      expect(result.phone).toBeNull();
       expect(mockPrismaService.userProfile.upsert).toHaveBeenCalledWith({
         where: { userId },
         update: {
@@ -132,10 +138,7 @@ describe('AuthService - Profile Update', () => {
     });
 
     it('should update only provided fields', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        profile: mockProfile,
-      });
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.userProfile.upsert.mockResolvedValue({
         ...mockProfile,
         displayName: 'New Name',

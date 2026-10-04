@@ -1,22 +1,25 @@
+import type { IAgentExecutor } from '@er/interfaces';
 import { Module } from '@nestjs/common';
-import { AgentDefinitionService } from './agent-definition.service';
+
 import { AgentDefinitionRepository } from './agent-definition.repository';
-import { UserAgentSubscriptionService } from './user-agent-subscription.service';
-import { UserAgentSubscriptionRepository } from './user-agent-subscription.repository';
+import { AgentDefinitionService } from './agent-definition.service';
 import { AgentExecutionService } from './agent-execution.service';
 import { AgentController } from './agent.controller';
-import { WebhookAgentExecutor } from './executors/webhook-agent.executor';
 import { EmailAgentExecutor } from './executors/email-agent.executor';
+import { SmsAgentExecutor } from './executors/sms-agent.executor';
+import { WebhookAgentExecutor } from './executors/webhook-agent.executor';
+import { UserAgentSubscriptionRepository } from './user-agent-subscription.repository';
+import { UserAgentSubscriptionService } from './user-agent-subscription.service';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { AuthModule } from '../auth/auth.module';
-import type { IAgentExecutor } from '@er/interfaces';
+import { SmsModule } from '../sms/sms.module';
 
 /**
  * Agent module.
  * Provides agent definition, subscription, and execution functionality.
  */
 @Module({
-  imports: [DatabaseModule, AuthModule],
+  imports: [DatabaseModule, AuthModule, SmsModule],
   controllers: [AgentController],
   providers: [
     AgentDefinitionService,
@@ -26,6 +29,7 @@ import type { IAgentExecutor } from '@er/interfaces';
     // Agent executors
     WebhookAgentExecutor,
     EmailAgentExecutor,
+    SmsAgentExecutor,
     // Agent execution service (will receive executors via injection)
     AgentExecutionService,
     // Provide executors as a token for injection
@@ -34,10 +38,11 @@ import type { IAgentExecutor } from '@er/interfaces';
       useFactory: (
         webhookExecutor: WebhookAgentExecutor,
         emailExecutor: EmailAgentExecutor,
+        smsExecutor: SmsAgentExecutor,
       ): IAgentExecutor[] => {
-        return [webhookExecutor, emailExecutor];
+        return [webhookExecutor, emailExecutor, smsExecutor];
       },
-      inject: [WebhookAgentExecutor, EmailAgentExecutor],
+      inject: [WebhookAgentExecutor, EmailAgentExecutor, SmsAgentExecutor],
     },
   ],
   exports: [
@@ -46,5 +51,6 @@ import type { IAgentExecutor } from '@er/interfaces';
     AgentExecutionService,
   ],
 })
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- NestJS @Module container
 export class AgentModule {}
 

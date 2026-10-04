@@ -57,6 +57,9 @@ export class ReminderSnoozeService implements IReminderSnoozeService {
       nextTriggerAt: snoozeUntil,
     });
 
+    // 5. Pause the escalation: no tiers while snoozed, and a fresh tier 1 when it wakes.
+    await this.prisma.escalationState.deleteMany({ where: { reminderId } });
+
     return snooze as ReminderSnooze;
   }
 
@@ -92,12 +95,10 @@ export class ReminderSnoozeService implements IReminderSnoozeService {
       where: { id: snooze.id },
     });
 
-    // 4. Update reminder status back to ACTIVE
-    // Note: nextTriggerAt should be recalculated based on schedule
-    // For now, we'll set it to a reasonable default
+    // 4. Cancelling a snooze means "remind me now": due on the next scheduler pass.
     await this.reminderRepository.update(reminderId, {
       status: 'ACTIVE',
-      // TODO: Recalculate nextTriggerAt based on schedule
+      nextTriggerAt: new Date(),
     });
   }
 }

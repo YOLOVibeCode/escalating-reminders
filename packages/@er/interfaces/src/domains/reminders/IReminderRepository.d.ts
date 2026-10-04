@@ -23,7 +23,7 @@ export interface ReminderUpdateData {
     importance?: ReminderImportance;
     escalationProfileId?: string;
     status?: ReminderStatus;
-    nextTriggerAt?: Date;
+    nextTriggerAt?: Date | null;
     lastTriggeredAt?: Date;
     completedAt?: Date;
 }

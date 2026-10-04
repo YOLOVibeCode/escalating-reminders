@@ -430,7 +430,7 @@ describe('ReminderRepository', () => {
       expect(result).toEqual(mockReminders);
       expect(mockPrismaService.reminder.findMany).toHaveBeenCalledWith({
         where: {
-          status: 'ACTIVE',
+          status: { in: ['ACTIVE', 'SNOOZED'] },
           nextTriggerAt: {
             lte: expect.any(Date),
           },
@@ -447,7 +447,7 @@ describe('ReminderRepository', () => {
 
       expect(mockPrismaService.reminder.findMany).toHaveBeenCalledWith({
         where: {
-          status: 'ACTIVE',
+          status: { in: ['ACTIVE', 'SNOOZED'] },
           nextTriggerAt: {
             lte: expect.any(Date),
           },
@@ -457,14 +457,14 @@ describe('ReminderRepository', () => {
       });
     });
 
-    it('should only return ACTIVE reminders', async () => {
+    it('should return ACTIVE and snoozed reminders, never completed or archived', async () => {
       mockPrismaService.reminder.findMany.mockResolvedValue([]);
 
       await repository.findDueForTrigger(10);
 
       expect(mockPrismaService.reminder.findMany).toHaveBeenCalledWith({
         where: {
-          status: 'ACTIVE',
+          status: { in: ['ACTIVE', 'SNOOZED'] },
           nextTriggerAt: {
             lte: expect.any(Date),
           },

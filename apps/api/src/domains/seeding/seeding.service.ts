@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infrastructure/database/prisma.service';
-import * as bcrypt from 'bcrypt';
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/strict-boolean-expressions, @typescript-eslint/prefer-nullish-coalescing -- legacy seeding typings */
 import type { ReminderImportance, ReminderStatus, ScheduleType, SubscriptionTier } from '@er/types';
+import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+
+import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 /**
  * Seeding service for E2E tests and development.
@@ -331,6 +333,25 @@ export class SeedingService {
         },
       },
       {
+        type: 'sms',
+        name: 'SMS',
+        description: 'Send notifications via SMS',
+        version: '1.0.0',
+        author: 'Escalating Reminders',
+        isOfficial: true,
+        isVerified: true,
+        minimumTier: 'FREE',
+        capabilities: {
+          canPush: true,
+          canPull: false,
+          canReceiveCommands: true,
+          supportedActions: ['snooze', 'dismiss', 'complete'],
+        },
+        configurationSchema: {
+          fields: [],
+        },
+      },
+      {
         type: 'webhook',
         name: 'Webhook',
         description: 'Send notifications via webhook',
@@ -443,7 +464,7 @@ export class SeedingService {
         const updated = await this.prisma.userAgentSubscription.update({
           where: { id: existing.id },
           data: {
-            configuration: mergedConfig as any,
+            configuration: mergedConfig,
             isEnabled: true,
           },
         });
@@ -524,7 +545,7 @@ export class SeedingService {
   /**
    * Calculate next trigger time from schedule
    */
-  private calculateNextTrigger(schedule: {
+  private calculateNextTrigger(_schedule: {
     type: string;
     cronExpression?: string;
     timezone: string;

@@ -5,13 +5,21 @@
 
 'use client';
 
-import { useMe } from '@/lib/api-client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
+import type { Subscription, User, UserProfile } from '@er/types';
 import { Button } from '@er/ui-components';
+import type { UseQueryResult } from '@tanstack/react-query';
+import Link from 'next/link';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMe } from '@/lib/api-client';
+
+type AuthMeUser = User & {
+  profile?: UserProfile | null;
+  subscription?: Subscription | null;
+};
 
 export default function SettingsPage() {
-  const meQuery = useMe() as unknown as { data?: any; isLoading: boolean };
+  const meQuery = useMe() as UseQueryResult<AuthMeUser>;
   const user = meQuery.data;
   const isLoading = meQuery.isLoading;
 
@@ -41,13 +49,13 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700">Email</label>
             <p className="mt-1 text-sm text-gray-900">{user?.email}</p>
           </div>
-          {user?.profile?.displayName && (
+          {user?.profile?.displayName !== undefined && user.profile.displayName !== '' && (
             <div>
               <label className="block text-sm font-medium text-gray-700">Display Name</label>
               <p className="mt-1 text-sm text-gray-900">{user.profile.displayName}</p>
             </div>
           )}
-          {user?.profile?.timezone && (
+          {user?.profile?.timezone !== undefined && user.profile.timezone !== '' && (
             <div>
               <label className="block text-sm font-medium text-gray-700">Timezone</label>
               <p className="mt-1 text-sm text-gray-900">{user.profile.timezone}</p>
@@ -73,10 +81,10 @@ export default function SettingsPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700">Current Plan</label>
             <p className="mt-1 text-sm font-semibold capitalize text-gray-900">
-              {user?.subscription?.tier || 'Free'}
+              {user?.subscription?.tier ?? 'Free'}
             </p>
           </div>
-          {user?.subscription && (
+          {user?.subscription !== undefined && user.subscription !== null && (
             <div>
               <label className="block text-sm font-medium text-gray-700">Status</label>
               <p className="mt-1 text-sm capitalize text-gray-900">
@@ -89,6 +97,20 @@ export default function SettingsPage() {
               Manage Subscription (Coming Soon)
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Trusted Contacts</CardTitle>
+          <CardDescription>People who can receive escalation alerts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/settings/trusted-contacts">
+            <Button variant="outline" data-testid="btn-manage-trusted-contacts">
+              Manage Trusted Contacts
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -128,4 +150,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

@@ -92,7 +92,8 @@ export class ReminderRepository implements IReminderRepository {
     const now = new Date();
     return this.prisma.reminder.findMany({
       where: {
-        status: 'ACTIVE',
+        // A snoozed reminder is due again once its snooze ends (snooze sets nextTriggerAt).
+        status: { in: ['ACTIVE', 'SNOOZED'] },
         nextTriggerAt: {
           lte: now,
         },

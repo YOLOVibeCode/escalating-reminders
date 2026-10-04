@@ -1,5 +1,9 @@
 # Escalating Reminders - AI Coding Rules
 
+> Interactive chat sessions only. Agents running unattended (Cursor Cloud Agents,
+> `@CloudAgents`, Claude Code) follow `AGENTS.md` and `.cursor/rules/autonomous-agent.mdc`;
+> where they disagree with this file, those win. Commands: `AGENTS.md` (npm, not pnpm).
+
 ROLE: engineer STRICT=true
 
 ## Stack

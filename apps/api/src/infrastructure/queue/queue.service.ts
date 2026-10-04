@@ -14,6 +14,7 @@ export class QueueService implements IQueue, OnModuleInit, OnModuleDestroy {
   private connection: Redis | null = null;
   private queues: Map<string, Queue> = new Map();
   private workers: Map<string, Worker> = new Map();
+  private handlers: Map<string, Map<string, (data: any) => Promise<void>>> = new Map();
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -88,6 +89,7 @@ export class QueueService implements IQueue, OnModuleInit, OnModuleDestroy {
         removeOnFail: options?.removeOnFail ?? false,
         delay: options?.delay,
         priority: options?.priority,
+        jobId: options?.jobId,
       });
       return job.id!;
     }
@@ -136,35 +138,33 @@ export class QueueService implements IQueue, OnModuleInit, OnModuleDestroy {
         throw new Error('Redis connection not available');
       }
 
-      const workerKey = `${queueName}:${jobName}`;
-      if (this.workers.has(workerKey)) {
-        this.logger.warn(`Worker for ${workerKey} already exists`);
+      const handlers = this.handlersFor(queueName);
+      if (handlers.has(jobName)) {
+        this.logger.warn(`Worker for ${queueName}:${jobName} already exists`);
         return;
       }
+      handlers.set(jobName, handler);
 
-      const worker = new Worker(
-        queueName,
-        async (job) => {
-          if (job.name === jobName) {
-            await handler(job.data);
-          }
-        },
-        {
+      // One BullMQ worker per queue, dispatching by job name. A worker per job name would
+      // pull every job on the queue and silently complete the ones it does not handle.
+      if (!this.workers.has(queueName)) {
+        const worker = new Worker(queueName, (job) => this.dispatch(queueName, job.name, job.data), {
           connection: this.connection,
           concurrency: 5,
-        },
-      );
+        });
 
-      worker.on('completed', (job) => {
-        this.logger.debug(`Job ${job.id} completed`);
-      });
+        worker.on('completed', (job) => {
+          this.logger.debug(`Job ${job.id} completed`);
+        });
 
-      worker.on('failed', (job, error) => {
-        this.logger.error(`Job ${job?.id} failed:`, error);
-      });
+        worker.on('failed', (job, error) => {
+          this.logger.error(`Job ${job?.id} failed:`, error);
+        });
 
-      this.workers.set(workerKey, worker);
-      this.logger.log(`Worker registered for ${workerKey}`);
+        this.workers.set(queueName, worker);
+      }
+
+      this.logger.log(`Worker registered for ${queueName}:${jobName}`);
       return;
     }
 
@@ -181,6 +181,24 @@ export class QueueService implements IQueue, OnModuleInit, OnModuleDestroy {
         timestamp: Date.now(),
       });
     });
+  }
+
+  private handlersFor(queueName: string): Map<string, (data: any) => Promise<void>> {
+    let handlers = this.handlers.get(queueName);
+    if (!handlers) {
+      handlers = new Map();
+      this.handlers.set(queueName, handlers);
+    }
+    return handlers;
+  }
+
+  /** Route a job to its handler. An unknown name fails the job (and is retried) instead of vanishing. */
+  async dispatch(queueName: string, jobName: string, data: unknown): Promise<void> {
+    const handler = this.handlers.get(queueName)?.get(jobName);
+    if (!handler) {
+      throw new Error(`No handler registered for ${queueName}:${jobName}`);
+    }
+    await handler(data);
   }
 
   async getJob(jobId: string): Promise<QueueJob | null> {

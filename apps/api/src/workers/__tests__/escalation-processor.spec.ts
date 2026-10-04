@@ -137,8 +137,9 @@ describe('EscalationProcessor', () => {
         reminderId: 'reminder_123',
       });
 
+      // advance() looks the state up by reminder id, so that is what it must be given.
       expect(mockEscalationStateService.advance).toHaveBeenCalledWith(
-        'state_123',
+        'reminder_123',
       );
       expect(mockQueueService.add).toHaveBeenCalledWith(
         'default',
@@ -152,7 +153,7 @@ describe('EscalationProcessor', () => {
       );
     });
 
-    it('should queue next advancement if delay exists', async () => {
+    it('sends only the current tier; the scheduler poll queues the next one', async () => {
       const updatedState: EscalationState = {
         ...mockEscalationState,
         currentTier: 1,
@@ -169,18 +170,27 @@ describe('EscalationProcessor', () => {
         reminderId: 'reminder_123',
       });
 
-      // Should queue advancement with delay
-      expect(mockQueueService.add).toHaveBeenCalledWith(
+      expect(mockQueueService.add).toHaveBeenCalledTimes(1);
+      expect(mockQueueService.add).not.toHaveBeenCalledWith(
         'high-priority',
         'escalation.advance',
-        {
-          escalationStateId: 'state_123',
-          reminderId: 'reminder_123',
-        },
-        expect.objectContaining({
-          delay: 5 * 60 * 1000, // 5 minutes in ms
-        }),
+        expect.anything(),
+        expect.anything(),
       );
+    });
+
+    it('should stop if escalation was acknowledged', async () => {
+      mockEscalationStateService.advance.mockResolvedValue({
+        ...mockEscalationState,
+        status: 'ACKNOWLEDGED',
+      });
+
+      await processor.processEscalationAdvancement({
+        escalationStateId: 'state_123',
+        reminderId: 'reminder_123',
+      });
+
+      expect(mockQueueService.add).not.toHaveBeenCalled();
     });
 
     it('should stop if escalation expired', async () => {
