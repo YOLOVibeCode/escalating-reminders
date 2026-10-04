@@ -36,13 +36,12 @@ export class EscalationProcessor {
     try {
       // 1. Advance escalation to next tier
       const updatedState = await this.escalationStateService.advance(
-        data.escalationStateId,
+        data.reminderId,
       );
 
-      // 2. Check if escalation expired (reached max tier)
-      if (updatedState.status === 'EXPIRED') {
+      if (updatedState.status !== 'ACTIVE') {
         this.logger.log(
-          `Escalation expired for reminder ${data.reminderId} - reached maximum tier`,
+          `Escalation for reminder ${data.reminderId} is ${updatedState.status}; nothing to send`,
         );
         return;
       }
@@ -102,50 +101,8 @@ export class EscalationProcessor {
       );
 
       // 6. If there's a delay before next tier, queue advancement job
-      const nextTier = tiers.find(
-        (t) => t.tierNumber === updatedState.currentTier + 1,
-      );
-
-      if (nextTier && nextTier.delayMinutes > 0) {
-        const delayMs = nextTier.delayMinutes * 60 * 1000;
-        this.logger.log(
-          `Queueing escalation advancement for reminder ${data.reminderId} in ${nextTier.delayMinutes} minutes`,
-        );
-
-        await this.queueService.add(
-          'high-priority',
-          'escalation.advance',
-          {
-            escalationStateId: updatedState.id,
-            reminderId: data.reminderId,
-          },
-          {
-            delay: delayMs,
-            attempts: 3,
-          },
-        );
-      } else if (nextTier) {
-        // No delay, advance immediately
-        this.logger.log(
-          `No delay for next tier, queueing immediate advancement for reminder ${data.reminderId}`,
-        );
-
-        await this.queueService.add(
-          'high-priority',
-          'escalation.advance',
-          {
-            escalationStateId: updatedState.id,
-            reminderId: data.reminderId,
-          },
-          {
-            attempts: 3,
-          },
-        );
-      } else {
-        this.logger.log(
-          `No more tiers for reminder ${data.reminderId} - escalation completed`,
-        );
-      }
+      // The next tier is not queued here: EscalationAdvancementJob polls escalation state every
+      // minute and queues it when its delay has passed. One mechanism, so a tier is never sent twice.
 
       this.logger.log(
         `Successfully processed escalation advancement for reminder ${data.reminderId}, now at tier ${updatedState.currentTier}`,

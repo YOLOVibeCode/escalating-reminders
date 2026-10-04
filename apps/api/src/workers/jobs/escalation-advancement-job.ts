@@ -47,6 +47,9 @@ export class EscalationAdvancementJob {
           {
             attempts: 3,
             backoffDelay: 2000,
+            // One job per escalation per tier: a pass that runs before the last one's job is
+            // processed must not queue a second advance.
+            jobId: `advance-${escalation.id}-${escalation.currentTier}`,
           },
         );
       }

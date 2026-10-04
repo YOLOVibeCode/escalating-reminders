@@ -10,6 +10,8 @@ import type { EscalationState, EscalationCancelReason, EscalationStatus } from '
  * Implements IEscalationStateService interface.
  * Handles escalation state business logic.
  */
+const DUE_TOLERANCE_MS = 5_000;
+
 @Injectable()
 export class EscalationStateService implements IEscalationStateService {
   constructor(
@@ -40,13 +42,18 @@ export class EscalationStateService implements IEscalationStateService {
     });
   }
 
-  async advance(escalationStateId: string): Promise<EscalationState> {
-    // Find state by reminder ID (since stateId is reminderId)
-    const state = await this.stateRepository.findByReminderId(escalationStateId);
+  /** Advance the escalation for a reminder by one tier. Takes the reminder id, not the state id. */
+  async advance(reminderId: string): Promise<EscalationState> {
+    const state = await this.stateRepository.findByReminderId(reminderId);
     if (!state) {
       throw new NotFoundError(
-        `Escalation state for reminder ${escalationStateId} not found`,
+        `Escalation state for reminder ${reminderId} not found`,
       );
+    }
+
+    // Acknowledged, completed, or expired escalations stay where they are.
+    if (state.status !== 'ACTIVE') {
+      return state;
     }
 
     // Get profile to check max tiers
@@ -140,18 +147,21 @@ export class EscalationStateService implements IEscalationStateService {
         delayMinutes: number;
       }>;
 
-      const currentTierConfig = tiers.find(
-        (t) => t.tierNumber === state.currentTier,
+      // A tier's delayMinutes is the wait before that tier is sent, so the clock for
+      // moving past the current tier is the next tier's delay. No next tier: nothing to do.
+      const nextTierConfig = tiers.find(
+        (t) => t.tierNumber === state.currentTier + 1,
       );
-      if (!currentTierConfig) continue;
+      if (!nextTierConfig) continue;
 
-      // Calculate when this tier should advance
       const lastEscalatedAt = state.lastEscalatedAt || state.startedAt;
       const advanceAt = new Date(
-        lastEscalatedAt.getTime() + currentTierConfig.delayMinutes * 60 * 1000,
+        lastEscalatedAt.getTime() + nextTierConfig.delayMinutes * 60 * 1000,
       );
 
-      if (advanceAt <= now) {
+      // The scheduler polls every 60 s on the same cadence the state was written on, so a
+      // tier is due on a pass that lands a few seconds short; otherwise it slips a full minute.
+      if (advanceAt.getTime() <= now.getTime() + DUE_TOLERANCE_MS) {
         dueStates.push(state);
       }
     }

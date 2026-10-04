@@ -52,13 +52,8 @@ export class ReminderProcessor {
       }
 
       // Start escalation if not already started
-      const escalationState = await this.escalationStateService.start(
+      await this.escalationStateService.start(
         reminder.id,
-        reminder.escalationProfileId,
-      );
-
-      // Get escalation profile to determine tier 1 delay
-      const profile = await this.escalationProfileRepository.findById(
         reminder.escalationProfileId,
       );
 
@@ -95,56 +90,7 @@ export class ReminderProcessor {
         },
       );
 
-      // Queue escalation advancement job if there's a next tier
-      if (profile) {
-        const tiers = profile.tiers as Array<{
-          tierNumber: number;
-          delayMinutes: number;
-        }>;
-
-        const tier2Config = tiers.find((t) => t.tierNumber === 2);
-
-        if (tier2Config) {
-          // Use tier 2's delayMinutes (delay before sending tier 2)
-          const delayMs = tier2Config.delayMinutes * 60 * 1000;
-
-          if (delayMs > 0) {
-            this.logger.log(
-              `Queueing escalation advancement for reminder ${reminder.id} in ${tier2Config.delayMinutes} minutes`,
-            );
-
-            await this.queueService.add(
-              'high-priority',
-              'escalation.advance',
-              {
-                escalationStateId: escalationState.id,
-                reminderId: reminder.id,
-              },
-              {
-                delay: delayMs,
-                attempts: 3,
-              },
-            );
-          } else {
-            // No delay, queue immediately (will be processed after tier 1 notifications)
-            this.logger.log(
-              `Queueing immediate escalation advancement for reminder ${reminder.id}`,
-            );
-
-            await this.queueService.add(
-              'high-priority',
-              'escalation.advance',
-              {
-                escalationStateId: escalationState.id,
-                reminderId: reminder.id,
-              },
-              {
-                attempts: 3,
-              },
-            );
-          }
-        }
-      }
+      // Tier 2 onward is queued by EscalationAdvancementJob once each tier's delay has passed.
 
       this.logger.log(`Successfully processed reminder trigger: ${data.reminderId}`);
     } catch (error) {
