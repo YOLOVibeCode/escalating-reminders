@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, Inject } from '@nestjs/common';
 import type { IAdminAuthorizationService, IAdminRepository } from '@er/interfaces';
 import type { AdminUser } from '@er/types';
-import { AdminRole } from '@er/types';
+import { AdminRole } from '@prisma/client';
 import { AdminPermission } from '@er/interfaces';
 
 /**

@@ -1,3 +1,5 @@
+> **Superseded.** Deployment is now `.railway/railway.ts` (dev / uat / production from `develop` / `uat` / `main`) and `ops/railway/bootstrap-env.sh`. See `AGENTS.md` › Environments. Kept for history.
+
 # Create New Railway Project for Escalating Reminders
 
 ## Quick Instructions

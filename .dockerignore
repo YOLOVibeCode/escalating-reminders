@@ -1,25 +1,28 @@
 # Docker ignore file (root level)
 # Excludes files from Docker build context
 
-# Dependencies
-node_modules
+# Dependencies and build outputs, at any depth: the image must build from what
+# git has, exactly as Railway's clean checkout does.
+**/node_modules
 npm-debug.log
 yarn-error.log
 .pnp
 .pnp.js
 
 # Build outputs
-.next
-dist
-build
-out
-coverage
+**/.next
+**/dist
+**/build
+**/out
+**/coverage
+**/*.tsbuildinfo
 .nyc_output
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# Environment files, at any depth (apps/api/.env, apps/web/.env.local, ...).
+# Images must never carry local secrets; the platform injects variables.
+**/.env
+**/.env.*
+!**/.env.example
 
 # IDE
 .vscode

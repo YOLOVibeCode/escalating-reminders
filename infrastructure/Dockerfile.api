@@ -1,57 +1,29 @@
-# Dockerfile for API service
-# Uses BuildKit for faster, cached builds
-# syntax=docker/dockerfile:1.4
+# API, worker, and scheduler image (one image, three start commands).
+#
+#   api        node dist/apps/api/src/main.js            (default CMD)
+#   worker     node dist/apps/api/src/workers/worker.js
+#   scheduler  node dist/apps/api/src/workers/scheduler.js
+#
+# Build from the repo root:  docker build -f infrastructure/Dockerfile.api .
+# The npm workspaces link @er/* into the root node_modules, so the whole
+# monorepo is installed here (Nest rewrites @er/* imports to relative paths, so
+# the packages' dist/ is never needed); dev dependencies stay because the
+# api's pre-deploy step runs `prisma migrate deploy`.
 
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
+FROM node:20-alpine AS build
+RUN apk add --no-cache openssl
 WORKDIR /app
-
-# Copy package files
-COPY package.json package-lock.json* ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/*/package.json ./packages/*/
-
-# Install dependencies
-RUN npm ci --workspace=apps/api
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
-
-# Copy source code
 COPY . .
+RUN npm ci \
+ && npm run prisma:generate --workspace=@er/api \
+ && npm run build --workspace=@er/api
 
-# Generate Prisma Client
-WORKDIR /app/apps/api
-RUN npx prisma generate
-
-# Build application
-RUN npm run build
-
-# Production image
-FROM base AS runner
-WORKDIR /app
-
+FROM node:20-alpine
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
-
-# Copy built application
-COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/apps/api/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/apps/api/package.json ./package.json
-COPY --from=builder --chown=nodejs:nodejs /app/apps/api/prisma ./prisma
-
-USER nodejs
-
+WORKDIR /app
+COPY --from=build /app /app
+WORKDIR /app/apps/api
+USER node
 EXPOSE 3801
-
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/apps/api/src/main.js"]

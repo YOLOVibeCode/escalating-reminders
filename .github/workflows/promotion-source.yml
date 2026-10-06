@@ -1,0 +1,45 @@
+name: promotion-source
+
+# Enforces that PRs into guarded branches come from the correct upstream branch.
+#   PR into uat  → must come from develop
+#   PR into main → must come from uat
+#
+# Required status check in ops/github/rulesets/{uat,main}.json. While those rulesets
+# are applied with enforcement=disabled, this check is advisory only.
+
+on:
+  pull_request:
+    branches: [uat, main]
+
+jobs:
+  check:
+    name: promotion-source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify promotion source
+        env:
+          TARGET: ${{ github.base_ref }}
+          SOURCE: ${{ github.head_ref }}
+        run: |
+          echo "PR: $SOURCE → $TARGET"
+          case "$TARGET" in
+            uat)
+              EXPECTED="develop"
+              ;;
+            main)
+              EXPECTED="uat"
+              ;;
+            *)
+              echo "No promotion-source rule for branch '$TARGET' — passing."
+              exit 0
+              ;;
+          esac
+
+          if [[ "$SOURCE" == "$EXPECTED" ]]; then
+            echo "✓ Source branch '$SOURCE' is the expected upstream for '$TARGET'"
+          else
+            echo "✗ PRs into '$TARGET' must come from '$EXPECTED', not '$SOURCE'"
+            echo "  To merge unrelated changes: temporarily set enforcement=disabled on the ruleset,"
+            echo "  merge, then re-enable. Or cherry-pick changes through the promotion chain."
+            exit 1
+          fi
