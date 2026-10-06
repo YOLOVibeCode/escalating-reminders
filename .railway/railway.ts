@@ -18,7 +18,7 @@
  * sets them, and none are written here.
  *
  *   railway link --environment <env>
- *   railway config plan     # always review
+ *   railway config plan     # always review (needs node >= 22.6 on PATH)
  *   railway config apply    # only after approval
  */
 import { defineRailway, github, postgres, preserve, project, redis, service } from "railway/iac";
@@ -34,6 +34,10 @@ export default defineRailway((ctx) => {
   const repo = github("YOLOVibeCode/escalating-reminders", { branch, checkSuites: true });
 
   const Postgres = postgres("Postgres", { region: REGION });
+  // Known quirk (2026-10-06): applying this to a second environment created Redis from the
+  // Bitnami template (railwayapp/redis, volume at /bitnami, no start command, no variables).
+  // uat was aligned with dev by hand: image redis:8.2, dev's start command, REDIS_PASSWORD plus
+  // the REDIS_* templates. bootstrap-env.sh fails if DATABASE_URL or REDIS_URL is empty.
   const Redis = redis("Redis", { region: REGION });
 
   const apiBuild = {

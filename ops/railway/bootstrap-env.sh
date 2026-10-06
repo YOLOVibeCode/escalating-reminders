@@ -29,6 +29,15 @@ API_URL="${API_URL%/}"; WEB_URL="${WEB_URL%/}"
 
 BACKEND=(api worker scheduler)
 
+# `railway config plan` evaluates .railway/railway.ts with the local node and
+# needs native TypeScript stripping (node >= 22.6). The repo's .nvmrc (20) is
+# for the app, not for this script.
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)
+NODE_MINOR=$(node -p 'process.versions.node.split(".")[1]' 2>/dev/null || echo 0)
+if (( NODE_MAJOR < 22 || (NODE_MAJOR == 22 && NODE_MINOR < 6) )); then
+  echo "node $(node --version 2>/dev/null) is too old for railway config plan; put node >= 22.6 first on PATH"; exit 1
+fi
+
 has_var() { # service key
   railway variable list --service "$1" --environment "$ENV" --json 2>/dev/null \
     | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('$2') else 1)"
@@ -44,7 +53,7 @@ echo "== escalating-reminders: $ENV"
 
 echo "[1/5] environment"
 if railway environment list --json 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if any(e.get('name')=='$ENV' for e in d) else 1)"; then
+    | python3 -c "import json,sys; d=json.load(sys.stdin); envs=d.get('environments', d) if isinstance(d, dict) else d; sys.exit(0 if any(isinstance(e, dict) and e.get('name')=='$ENV' for e in envs) else 1)"; then
   echo "  exists"
 else
   railway environment new "$ENV" >/dev/null && echo "  created"
@@ -72,6 +81,18 @@ for SVC in "${BACKEND[@]}"; do
 done
 set_plain web NEXT_PUBLIC_API_URL "$API_URL"
 echo "  api=$API_URL web=$WEB_URL"
+
+echo "  database references"
+for SVC in "${BACKEND[@]}"; do
+  for KEY in DATABASE_URL REDIS_URL; do
+    if ! has_var "$SVC" "$KEY"; then
+      echo "  ✗ $SVC $KEY is empty: the Postgres/Redis service in $ENV has no variables yet."
+      echo "    Compare it with dev (image, start command, volume, variables) before deploying."
+      exit 1
+    fi
+  done
+done
+echo "  DATABASE_URL and REDIS_URL resolve on ${BACKEND[*]}"
 
 echo "[4/5] relay and OAuth secrets"
 MISSING=()
