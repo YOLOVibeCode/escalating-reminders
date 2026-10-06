@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Lint is its own CI job (1.7k pre-existing findings); a lint finding must not block a deployable build.
+  // Type errors still fail `next build`.
+  eslint: { ignoreDuringBuilds: true },
   transpilePackages: [
     '@er/types',
     '@er/constants',
