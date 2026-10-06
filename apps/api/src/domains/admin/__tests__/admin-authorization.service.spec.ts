@@ -60,6 +60,15 @@ describe('AdminAuthorizationService', () => {
     });
   });
 
+  it('keys the permission matrix by the real role names', () => {
+    // AdminRole must be the Prisma enum value. Imported from a type-only re-export it is
+    // undefined at runtime, and every role collapses onto one "undefined" key.
+    const matrix = (service as unknown as { PERMISSION_MATRIX: Record<string, unknown> }).PERMISSION_MATRIX;
+    expect(Object.keys(matrix).sort()).toEqual(
+      ['BILLING_ADMIN', 'READONLY_ADMIN', 'SUPER_ADMIN', 'SUPPORT_ADMIN'],
+    );
+  });
+
   describe('checkPermission', () => {
     it('should return true for SUPER_ADMIN with any permission', () => {
       const superAdmin: AdminUser = {

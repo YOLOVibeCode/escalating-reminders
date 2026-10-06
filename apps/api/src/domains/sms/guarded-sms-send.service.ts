@@ -71,6 +71,9 @@ export class GuardedSmsSendService {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        // The relay captures dev, tags uat, and delivers anything else. Unset means dev,
+        // so a misconfigured environment can never text a real phone.
+        'X-App-Env': this.configService.get<string>('APP_ENV')?.trim() || 'dev',
       },
       body: JSON.stringify({ to: phone, body: brandedBody }),
     });

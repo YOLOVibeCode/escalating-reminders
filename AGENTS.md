@@ -73,6 +73,28 @@ contract that `npm run version-board` in cloud-agents reads:
 never `NODE_ENV`. Keep `/health` liveness-only; dependency checks belong on a
 separate route.
 
+## Environments
+
+Three, on Railway, each deployed from its own branch. Changes only move forward
+by pull request: `feature → develop → uat → main`.
+
+| Environment | Branch | `APP_ENV` | Store | SMS through the relay (mail once it moves there) |
+| --- | --- | --- | --- | --- |
+| dev | `develop` | `dev` | `STORE_MODE=test` | captured (`X-App-Env: dev`), never delivered |
+| uat | `uat` | `uat` | `STORE_MODE=test` | tagged (`X-App-Env: uat`) |
+| production | `main` | `production` | `STORE_MODE=live`, set by hand | delivered |
+
+- **Agents branch from `develop` and open PRs into `develop`.** Promotion PRs are
+  `develop → uat` and `uat → main`; the `promotion-source` check fails any other
+  source. Rulesets for all three branches are in `ops/github/rulesets/`.
+- Infrastructure is code: `.railway/railway.ts` (api, worker, scheduler, web,
+  Postgres, Redis per environment). Secrets are `preserve()`d there and set by
+  `ops/railway/bootstrap-env.sh` under `op run`; never write a value into the repo.
+- Images: `infrastructure/Dockerfile.api` (api, worker, scheduler) and
+  `infrastructure/Dockerfile.web`. Both build from a clean checkout; the api runs
+  `prisma migrate deploy` as its pre-deploy step.
+- `APP_ENV` drives `/health`, the dev/uat banner, and `X-App-Env`. Unset means `dev`.
+
 ## Conventions
 
 - TypeScript strict. No `any` without a comment saying why.
@@ -84,7 +106,7 @@ separate route.
 
 - Edit an existing migration. Add a new one.
 - Touch `railway*.toml`, `infrastructure/`, Dockerfiles, or CI config unless the task says so.
-- Push to `main`, `master`, or `develop`. Work on a branch; open a PR. The shell hook enforces this.
+- Push to `develop`, `uat`, `main`, or `master`. Branch from `develop`; open a PR into `develop`. The shell hook enforces this.
 - Add a provider SDK (OpenAI, Twilio, SendGrid, Square). Use the Noctusoft platforms above.
 - Commit secrets or `.env` files, or print any part of a key.
 - Switch the Cursor model to Fast, Opus, or GPT. Composer 2.5, Fast off. Resume a `bc-` id; do not start a second job. Never buy extra Max usage.
@@ -94,6 +116,6 @@ separate route.
 1. The fresh-clone subset above passes; paste the output.
 2. New behavior has a test.
 3. User-facing changes are reflected in `README.md` or `docs/`.
-4. `git status` is clean; the work is on a branch with a PR.
+4. `git status` is clean; the work is on a branch with a PR into `develop`.
 5. Last lines of the job are COST on each AI's own meter. If usage is missing:
    `COST this run: unknown`.

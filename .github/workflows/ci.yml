@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [develop, uat, main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -25,11 +25,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
-  # Reported, not blocking: ~1.7k findings predate CI. Flip continue-on-error off once it is green.
+  # Reported, not blocking: ~1.7k findings predate CI. continue-on-error sits on the step,
+  # so the job stays green (no permanent red X) while the step shows the failures.
+  # Remove it once lint is clean.
   lint:
     name: lint (advisory)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,3 +40,4 @@ jobs:
       - run: npm ci
       - run: npm run prisma:generate --workspace=@er/api
       - run: npm run lint
+        continue-on-error: true

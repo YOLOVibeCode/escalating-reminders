@@ -1,57 +1,30 @@
-# Dockerfile for Web service (Next.js)
-# Uses BuildKit for faster, cached builds
-# syntax=docker/dockerfile:1.4
+# Web (Next.js) image.
+#
+# Build from the repo root:  docker build -f infrastructure/Dockerfile.web .
+# NEXT_PUBLIC_API_URL and APP_ENV are read at build time: the API URL is inlined
+# into the client bundle and the layout (env banner) is statically rendered.
+# Railway passes service variables as build args, so set both on the service
+# before it builds.
 
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
+FROM node:20-alpine AS build
+ARG NEXT_PUBLIC_API_URL
+ARG APP_ENV
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    APP_ENV=$APP_ENV \
+    NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
-
-# Copy package files
-COPY package.json package-lock.json* ./
-COPY apps/web/package.json ./apps/web/
-COPY packages/*/package.json ./packages/*/
-
-# Install dependencies
-RUN npm ci --workspace=apps/web
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-
-# Copy dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-
-# Copy source code
 COPY . .
+# @er/types re-exports Prisma's generated types, so generate the client first.
+RUN npm ci \
+ && npm run prisma:generate --workspace=@er/api \
+ && npm run build --workspace=@er/web
 
-# Build Next.js application
-WORKDIR /app/apps/web
-RUN npm run build
-
-# Production image
-FROM base AS runner
+FROM node:20-alpine
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy built application
-COPY --from=builder /app/apps/web/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
-
-USER nextjs
-
+COPY --from=build /app /app
+WORKDIR /app/apps/web
+USER node
 EXPOSE 3800
-
-ENV PORT=3800
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "exec npx next start -p ${PORT:-3800}"]

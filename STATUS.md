@@ -33,11 +33,13 @@ pass (every 60 s) after its delay has passed.
    `X-App-Env`.
 3. **Billing.** `webhooks/store` verifies signatures and ignores the event. Store
    events must update `Subscription` / `PaymentHistory`; users need a plan page.
-4. **Deploy.** Not deployed anywhere. Railway services for api, web, worker,
-   scheduler; `APP_ENV` per environment; register in cloud-agents `services.json`.
-5. **CI and the web build.** `chore/ci-lint` adds CI (build, typecheck, test; lint
-   advisory) and stops `next build` failing on lint, which today blocks deploying
-   the web app. Pushing it needs a GitHub token with the `workflow` scope.
+4. **Deploy.** The dev → uat → production path is defined (`.railway/railway.ts`,
+   `ops/railway/bootstrap-env.sh`, promotion rulesets, `AGENTS.md` › Environments)
+   and both images are proven locally from a clean context. Not yet provisioned:
+   the Railway project, its three environments, secrets in 1Password, and domains
+   (`escalating-reminders.com` has no DNS). Then register all three in cloud-agents
+   `services.json`.
+5. **CI.** Runs on every PR and on pushes to `develop`, `uat`, `main`; lint is advisory.
 6. **Lint.** ~1.7k pre-existing findings (api 1,207, web 532). Advisory in CI
    until burned down.
 7. **Phase 1 features not started:** email watchers (completion detection),
