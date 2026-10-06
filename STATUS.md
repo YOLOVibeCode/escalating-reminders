@@ -5,7 +5,9 @@ The one current status page. Files under `docs/` named `*-STATUS`, `*-COMPLETE`,
 read them for context, not for the current state. Update this file in the PR
 that changes the state.
 
-_Last verified: 2026-10-04, locally (Postgres, Redis, MailHog in Docker; API,
+_Last verified: 2026-10-04 locally, 2026-10-06 on Railway dev/uat_
+
+_Earlier: 2026-10-04, locally (Postgres, Redis, MailHog in Docker; API,
 worker, scheduler from `dist/`)._
 
 ## The core loop
@@ -33,12 +35,16 @@ pass (every 60 s) after its delay has passed.
    `X-App-Env`.
 3. **Billing.** `webhooks/store` verifies signatures and ignores the event. Store
    events must update `Subscription` / `PaymentHistory`; users need a plan page.
-4. **Deploy.** The dev → uat → production path is defined (`.railway/railway.ts`,
-   `ops/railway/bootstrap-env.sh`, promotion rulesets, `AGENTS.md` › Environments)
-   and both images are proven locally from a clean context. Not yet provisioned:
-   the Railway project, its three environments, secrets in 1Password, and domains
-   (`escalating-reminders.com` has no DNS). Then register all three in cloud-agents
-   `services.json`.
+4. **Deploy.** dev and uat are live on Railway (2026-10-06), each running api, worker,
+   scheduler, web, Postgres, Redis from its branch:
+   - dev (`develop`): https://web-dev-8fe7.up.railway.app · https://api-dev-03d7.up.railway.app/health
+   - uat (`uat`): https://web-uat-4363.up.railway.app · https://api-uat-a875.up.railway.app/health
+
+   A reminder fires and the worker attempts delivery on dev. Still open: relay and
+   OAuth secrets in 1Password (`NOCTUSOFT_API_KEY`, `RELAY_WEBHOOK_SECRET`,
+   `RELAY_INBOUND_SECRET`, `GOOGLE_CLIENT_ID/SECRET`), so SMS, store events, and
+   Google sign-in are off; email has no transport until it moves to the relay (gap 2);
+   production is not provisioned; custom domains; rulesets are still advisory.
 5. **CI.** Runs on every PR and on pushes to `develop`, `uat`, `main`; lint is advisory.
 6. **Lint.** ~1.7k pre-existing findings (api 1,207, web 532). Advisory in CI
    until burned down.
