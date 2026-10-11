@@ -35,10 +35,19 @@ pass (every 60 s) after its delay has passed.
    events must update `Subscription` / `PaymentHistory`; users need a plan page.
 4. **Deploy.** The dev → uat → production path is defined (`.railway/railway.ts`,
    `ops/railway/bootstrap-env.sh`, promotion rulesets, `AGENTS.md` › Environments)
-   and both images are proven locally from a clean context. Not yet provisioned:
-   the Railway project, its three environments, secrets in 1Password, and domains
-   (`escalating-reminders.com` has no DNS). Then register all three in cloud-agents
+   and both images are proven locally from a clean context. dev and uat run on
+   Railway (`web-uat-4363.up.railway.app`, `api-uat-a875.up.railway.app`) at
+   `0511b8c` (checked 2026-10-11). The production environment exists but has no
+   services, and `escalatingreminders.com` (apex, www, api, app) still points at
+   Porkbun's parking page with no HTTPS. Then register all three in cloud-agents
    `services.json`.
+   - **Toll-free texting (+1 833 327 0309).** Not submitted for verification, so
+     the relay sends this product's texts from the shared Noctusoft number.
+     Carriers review the live site, so it waits on production and the domain.
+     Ready: the unchecked opt-in box, `/terms#sms`, `/privacy`, and the public
+     `/sms` page. Still needed: mail for `support@escalatingreminders.com` (no
+     MX), and a trusted-contact opt-in the contact starts themselves (today the
+     app texts a number the user typed in, asking for YES).
 5. **CI.** Runs on every PR and on pushes to `develop`, `uat`, `main`; lint is advisory.
 6. **Lint.** ~1.7k pre-existing findings (api 1,207, web 532). Advisory in CI
    until burned down.
