@@ -13,6 +13,9 @@ export function PublicFooter(): JSX.Element {
         <Link href="/terms" data-testid="link-terms" className="hover:text-gray-900">
           Terms of Service
         </Link>
+        <Link href="/sms" data-testid="link-sms" className="hover:text-gray-900">
+          Text messages
+        </Link>
       </nav>
       <p className="mt-2">Escalating Reminders</p>
     </footer>
