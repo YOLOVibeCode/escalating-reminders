@@ -14,8 +14,14 @@ import { AgentExecutionService } from '../agents/agent-execution.service';
 import { EscalationProfileRepository } from '../escalation/escalation-profile.repository';
 import { ReminderRepository } from '../reminders/reminder.repository';
 import { GuardedSmsSendService } from '../sms/guarded-sms-send.service';
-import { SMS_PURPOSE } from '../sms/sms-compliance.constants';
+import {
+  SMS_BRAND,
+  SMS_STOP_FOOTER,
+  buildTrustedContactAlertContent,
+  trustedContactSmsPurpose,
+} from '../sms/sms-compliance.constants';
 import { SmsConsentRepository } from '../sms/sms-consent.repository';
+import { fitSingleSegment } from '../sms/sms-segment.util';
 
 /**
  * Notification service.
@@ -313,28 +319,41 @@ export class NotificationService implements INotificationService {
       where: { userId },
     });
 
+    let inviter: string | null = null;
+
     for (const contact of contacts) {
       const prefs = contact.notificationPreferences as { sms?: boolean };
       if (prefs.sms !== true || contact.phone === null || contact.phone === '') {
         continue;
       }
-      const hasConsent = await this.smsConsentRepository.hasActiveConsent(
-        contact.phone,
-        SMS_PURPOSE,
-      );
+      // Only a contact who opted in themselves (on the opt-in page, or a YES to a legacy request)
+      // is texted, and that consent covers this user's reminders only.
+      const purpose = trustedContactSmsPurpose(contact.id);
+      const hasConsent = await this.smsConsentRepository.hasActiveConsent(contact.phone, purpose);
       if (!hasConsent) {
         continue;
       }
 
-      const message =
-        tierConfig.message ?? reminder.description ?? reminder.title;
-      const body = `Trusted contact alert (tier ${tier}): ${reminder.title}\n${message}`;
+      if (inviter === null) {
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          include: { profile: true },
+        });
+        const name = user?.profile?.displayName.trim();
+        inviter = name !== undefined && name !== '' ? name : 'Someone';
+      }
+
+      const message = tierConfig.message ?? reminder.description ?? reminder.title;
+      const body = fitSingleSegment(
+        buildTrustedContactAlertContent(inviter, tier, reminder.title, message),
+        { prefix: `${SMS_BRAND}: `, footer: SMS_STOP_FOOTER },
+      );
 
       try {
         await this.guardedSmsSend.send({
           phone: contact.phone,
           body,
-          purpose: SMS_PURPOSE,
+          purpose,
           metadata: { trustedContactId: contact.id, reminderId: reminder.id },
         });
       } catch (error) {

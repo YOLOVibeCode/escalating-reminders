@@ -18,6 +18,10 @@ export class TrustedContactRepository {
     return this.prisma.trustedContact.findUnique({ where: { id } });
   }
 
+  async findByOptInToken(token: string): Promise<TrustedContact | null> {
+    return this.prisma.trustedContact.findUnique({ where: { smsOptInToken: token } });
+  }
+
   async create(data: {
     userId: string;
     name: string;
@@ -25,6 +29,7 @@ export class TrustedContactRepository {
     phone?: string | null;
     relationship: string;
     notificationPreferences: { email: boolean; sms: boolean };
+    smsOptInToken?: string | null;
   }): Promise<TrustedContact> {
     const createData: Record<string, unknown> = {
       userId: data.userId,
@@ -34,6 +39,7 @@ export class TrustedContactRepository {
     };
     if (data.email !== undefined) createData.email = data.email;
     if (data.phone !== undefined) createData.phone = data.phone;
+    if (data.smsOptInToken !== undefined) createData.smsOptInToken = data.smsOptInToken;
 
     return this.prisma.trustedContact.create({
       data: createData as Parameters<typeof this.prisma.trustedContact.create>[0]['data'],
@@ -48,6 +54,7 @@ export class TrustedContactRepository {
       phone: string | null;
       relationship: string;
       notificationPreferences: { email: boolean; sms: boolean };
+      smsOptInToken: string | null;
     }>,
   ): Promise<TrustedContact> {
     const prismaData: Record<string, unknown> = { ...data };

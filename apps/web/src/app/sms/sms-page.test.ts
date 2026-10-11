@@ -5,6 +5,7 @@ import SmsPage from './page';
 import {
   SMS_SUPPORT_EMAIL,
   buildSmsSelfOptInLabel,
+  buildTrustedContactOptInLabel,
 } from '../../../../../packages/@er/constants/src/sms-compliance';
 
 describe('/sms public page', () => {
@@ -35,5 +36,19 @@ describe('/sms public page', () => {
       expect(link).toHaveAttribute('href', '/privacy');
     }
     expect(screen.getByTestId('link-sms')).toHaveAttribute('href', '/sms');
+  });
+
+  it('says trusted contacts opt in themselves, never texted first, with the exact box wording', () => {
+    render(createElement(SmsPage));
+
+    expect(screen.getByTestId('sms-trusted-contact-policy')).toHaveTextContent(
+      'We never text a number someone else typed in',
+    );
+    expect(screen.getByTestId('sms-trusted-contact-wording')).toHaveTextContent(
+      buildTrustedContactOptInLabel('[name]'),
+    );
+    expect(
+      screen.getByRole('checkbox', { name: 'Example trusted contact opt-in box' }),
+    ).not.toBeChecked();
   });
 });

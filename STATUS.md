@@ -45,9 +45,10 @@ pass (every 60 s) after its delay has passed.
      the relay sends this product's texts from the shared Noctusoft number.
      Carriers review the live site, so it waits on production and the domain.
      Ready: the unchecked opt-in box, `/terms#sms`, `/privacy`, and the public
-     `/sms` page. Still needed: mail for `support@escalatingreminders.com` (no
-     MX), and a trusted-contact opt-in the contact starts themselves (today the
-     app texts a number the user typed in, asking for YES).
+     `/sms` page, trusted contacts who opt in themselves on `/contact-optin/<token>`
+     (adding a contact texts nobody; consent is per contact), "Reply STOP to opt
+     out." on every reminder and escalation text, and `support@escalatingreminders.com`
+     forwarding to the owner (Porkbun, 2026-10-11).
 5. **CI.** Runs on every PR and on pushes to `develop`, `uat`, `main`; lint is advisory.
 6. **Lint.** ~1.7k pre-existing findings (api 1,207, web 532). Advisory in CI
    until burned down.
