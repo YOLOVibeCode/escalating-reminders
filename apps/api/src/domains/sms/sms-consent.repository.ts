@@ -88,6 +88,14 @@ export class SmsConsentRepository {
     });
   }
 
+  /** START: restore every purpose this phone had opted in to before it replied STOP. */
+  async clearOptOutAllPurposes(phone: string): Promise<void> {
+    await this.prisma.smsConsent.updateMany({
+      where: { phone, consentedAt: { not: null }, revokedAt: { not: null } },
+      data: { revokedAt: null },
+    });
+  }
+
   async recordOptOutAllPurposes(phone: string): Promise<void> {
     const rows = await this.prisma.smsConsent.findMany({ where: { phone } });
     const now = new Date();

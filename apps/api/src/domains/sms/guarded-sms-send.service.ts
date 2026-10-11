@@ -10,7 +10,6 @@ export interface IGuardedSmsSendOptions {
   phone: string;
   body: string;
   purpose?: string;
-  allowWithoutConsent?: 'double-opt-in-confirmation';
   metadata?: Record<string, unknown>;
 }
 
@@ -54,11 +53,10 @@ export class GuardedSmsSendService {
     const brandedBody = this.prefixBrand(options.body);
     assertSingleSmsSegment(brandedBody);
 
-    if (options.allowWithoutConsent !== 'double-opt-in-confirmation') {
-      const allowed = await this.consentRepository.hasActiveConsent(phone, purpose);
-      if (!allowed) {
-        throw new Error(`SMS consent not active for ${phone}`);
-      }
+    // No exceptions: every text needs consent the recipient gave for this purpose.
+    const allowed = await this.consentRepository.hasActiveConsent(phone, purpose);
+    if (!allowed) {
+      throw new Error(`SMS consent not active for ${phone}`);
     }
 
     const apiKey = this.getRelayApiKey();

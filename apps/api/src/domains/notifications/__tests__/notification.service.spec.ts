@@ -51,6 +51,9 @@ describe('NotificationService', () => {
     trustedContact: {
       findMany: jest.fn().mockResolvedValue([]),
     },
+    user: {
+      findUnique: jest.fn(),
+    },
   };
 
   const mockGuardedSmsSend = {
@@ -317,6 +320,56 @@ describe('NotificationService', () => {
       ][];
       const updateArg = updateCalls[0]?.[1];
       expect(updateArg?.deliveredAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('trusted contact texts', () => {
+    const reminder = {
+      id: 'reminder_9',
+      userId: 'user_123',
+      title: 'Pay rent',
+      description: null,
+      importance: 'HIGH',
+      status: 'ACTIVE',
+      escalationProfileId: 'profile_tc',
+      nextTriggerAt: new Date(),
+      lastTriggeredAt: null,
+      completedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const profile = {
+      id: 'profile_tc',
+      userId: 'user_123',
+      name: 'Contacts at tier 2',
+      isPreset: false,
+      tiers: [{ tierNumber: 2, delayMinutes: 0, agentIds: [], includeTrustedContacts: true }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('texts only contacts who opted in for this user, naming the user and ending with STOP', async () => {
+      mockReminderRepository.findById.mockResolvedValue(reminder);
+      mockEscalationProfileRepository.findById.mockResolvedValue(profile);
+      mockPrisma.trustedContact.findMany.mockResolvedValueOnce([
+        { id: 'tc_ok', phone: '+15125550101', notificationPreferences: { email: true, sms: true } },
+        { id: 'tc_invited', phone: '+15125550102', notificationPreferences: { email: true, sms: true } },
+        { id: 'tc_email', phone: '+15125550103', notificationPreferences: { email: true, sms: false } },
+      ]);
+      mockPrisma.user.findUnique.mockResolvedValue({ profile: { displayName: 'Jordan' } });
+      mockSmsConsentRepository.hasActiveConsent.mockImplementation((_phone: string, purpose: string) =>
+        Promise.resolve(purpose === 'trusted-contact:tc_ok'),
+      );
+      mockGuardedSmsSend.send.mockResolvedValue({});
+
+      await service.sendTierNotifications('reminder_9', 'user_123', 2);
+
+      expect(mockGuardedSmsSend.send).toHaveBeenCalledTimes(1);
+      const sent = (mockGuardedSmsSend.send.mock.calls as unknown[][])[0][0] as { phone: string; purpose: string; body: string };
+      expect(sent.phone).toBe('+15125550101');
+      expect(sent.purpose).toBe('trusted-contact:tc_ok');
+      expect(sent.body).toBe("Jordan's reminder is still open (tier 2): Pay rent. Reply STOP to opt out.");
+      expect(`Escalating Reminders: ${sent.body}`.length).toBeLessThanOrEqual(160);
     });
   });
 });

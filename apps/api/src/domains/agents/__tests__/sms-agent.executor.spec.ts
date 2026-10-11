@@ -60,7 +60,7 @@ describe('SmsAgentExecutor', () => {
     expect(guardedSmsSend.send).toHaveBeenCalledWith(
       expect.objectContaining({
         phone: '+15125550100',
-        body: 'Reminder\nPlease acknowledge',
+        body: 'Reminder\nPlease acknowledge. Reply STOP to opt out.',
       }),
     );
   });
