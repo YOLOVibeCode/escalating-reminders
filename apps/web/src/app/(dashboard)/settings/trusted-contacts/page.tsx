@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 
 
+type SmsStatus = 'EMAIL_ONLY' | 'INVITED' | 'OPTED_IN' | 'OPTED_OUT';
+
 interface ITrustedContactRow {
   id: string;
   name: string;
@@ -14,6 +16,20 @@ interface ITrustedContactRow {
   phone?: string | null;
   relationship: string;
   notificationPreferences: { email: boolean; sms: boolean };
+  smsOptInToken?: string | null;
+  smsStatus?: SmsStatus;
+}
+
+const STATUS_LABEL: Record<SmsStatus, string> = {
+  EMAIL_ONLY: 'Email only',
+  INVITED: 'Invited to texts: waiting for them to opt in',
+  OPTED_IN: 'Opted in to texts',
+  OPTED_OUT: 'Opted out of texts (replied STOP)',
+};
+
+function optInLink(token: string): string {
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  return `${origin}/contact-optin/${token}`;
 }
 
 export default function TrustedContactsPage(): JSX.Element {
@@ -24,6 +40,7 @@ export default function TrustedContactsPage(): JSX.Element {
   const [notifyViaSms, setNotifyViaSms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -49,7 +66,7 @@ export default function TrustedContactsPage(): JSX.Element {
         name,
         phone: phone.trim() || undefined,
         relationship,
-        notifyViaSms: notifyViaSms && Boolean(phone.trim()),
+        notifyViaSms,
       });
       setName('');
       setPhone('');
@@ -109,18 +126,20 @@ export default function TrustedContactsPage(): JSX.Element {
                 placeholder="+1 555 123 4567"
               />
             </div>
-            {phone.trim() && (
-              <label className="flex items-center gap-2 text-sm" htmlFor="notify-via-sms">
-                <input
-                  id="notify-via-sms"
-                  type="checkbox"
-                  data-testid="checkbox-contact-notify-sms"
-                  checked={notifyViaSms}
-                  onChange={(e) => { setNotifyViaSms(e.target.checked); }}
-                />
-                Request SMS notifications for this contact (they must reply YES to opt in)
-              </label>
-            )}
+            <label className="flex items-start gap-2 text-sm" htmlFor="notify-via-sms">
+              <input
+                id="notify-via-sms"
+                type="checkbox"
+                className="mt-1"
+                data-testid="checkbox-contact-notify-sms"
+                checked={notifyViaSms}
+                onChange={(e) => { setNotifyViaSms(e.target.checked); }}
+              />
+              <span>
+                Invite this contact to get escalation texts. You&rsquo;ll get a link to send them, and
+                they opt in themselves. We never text them first.
+              </span>
+            </label>
             <div>
               <label htmlFor="contact-relationship" className="block text-sm font-medium text-gray-700">
                 Relationship
@@ -149,11 +168,43 @@ export default function TrustedContactsPage(): JSX.Element {
             <p data-testid="empty-trusted-contacts">No trusted contacts yet.</p>
           ) : (
             <ul data-testid="list-trusted-contacts" className="space-y-2">
-              {contacts.map((c) => (
-                <li key={c.id} data-testid={`row-contact-${c.id}`}>
-                  {c.name} — {c.phone ?? 'no phone'}
-                </li>
-              ))}
+              {contacts.map((c) => {
+                const status: SmsStatus = c.smsStatus ?? 'EMAIL_ONLY';
+                const token = c.smsOptInToken ?? null;
+                return (
+                  <li key={c.id} data-testid={`row-contact-${c.id}`} className="space-y-1">
+                    <div>
+                      {c.name} — {c.phone ?? 'no phone'}
+                    </div>
+                    <div className="text-sm text-gray-600" data-testid={`status-contact-${c.id}`}>
+                      {STATUS_LABEL[status]}
+                    </div>
+                    {status === 'INVITED' && token !== null && (
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span>Send them this link:</span>
+                        <code
+                          className="break-all rounded bg-gray-100 px-1"
+                          data-testid={`optin-link-${c.id}`}
+                        >
+                          {optInLink(token)}
+                        </code>
+                        <button
+                          type="button"
+                          className="text-blue-600 hover:text-blue-800"
+                          data-testid={`btn-copy-optin-${c.id}`}
+                          onClick={() => {
+                            void navigator.clipboard.writeText(optInLink(token)).then(() => {
+                              setCopiedId(c.id);
+                            });
+                          }}
+                        >
+                          {copiedId === c.id ? 'Copied' : 'Copy link'}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

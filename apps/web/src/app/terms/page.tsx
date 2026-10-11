@@ -22,8 +22,10 @@ export default function TermsPage(): JSX.Element {
           </p>
           <p>
             <strong>How to opt in:</strong> Provide your mobile number and check the optional SMS
-            opt-in box on your profile or reply YES to a confirmation text when someone adds your
-            number as a trusted contact.
+            opt-in box on your profile. A trusted contact opts in on the page linked from the
+            invitation the user sends them, by entering their own mobile number and checking the
+            optional box there; we never text a trusted contact before they do. Their consent covers
+            escalation alerts for that one user&rsquo;s reminders.
           </p>
           <p>Message frequency varies.</p>
           <p>Message and data rates may apply.</p>

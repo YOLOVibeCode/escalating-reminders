@@ -11,6 +11,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { GuardedSmsSendService } from '../../sms/guarded-sms-send.service';
 import { parseToE164 } from '../../sms/phone.util';
+import { SMS_BRAND, SMS_STOP_FOOTER } from '../../sms/sms-compliance.constants';
+import { fitSingleSegment } from '../../sms/sms-segment.util';
 
 @Injectable()
 export class SmsAgentExecutor implements IAgentExecutor {
@@ -36,7 +38,11 @@ export class SmsAgentExecutor implements IAgentExecutor {
       }
 
       const phone = parseToE164(rawPhone);
-      const text = `${payload.title}\n${payload.message}`;
+      const content =
+        payload.message !== '' && payload.message !== payload.title
+          ? `${payload.title}\n${payload.message}`
+          : payload.title;
+      const text = fitSingleSegment(content, { prefix: `${SMS_BRAND}: `, footer: SMS_STOP_FOOTER });
 
       const result = await this.guardedSmsSend.send({
         phone,
