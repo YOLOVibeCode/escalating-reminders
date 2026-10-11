@@ -7,6 +7,7 @@ import {
   SMS_PURPOSE,
   SMS_SUPPORT_EMAIL,
   buildSmsSelfOptInLabel,
+  buildTrustedContactOptInLabel,
 } from '../../../../../packages/@er/constants/src/sms-compliance';
 
 const SMS_PRIVACY_VERBATIM =
@@ -61,6 +62,41 @@ export default function SmsPage(): JSX.Element {
           <p>
             We record when you checked the box and the wording you saw. Reply STOP to any message, or
             uncheck the box in your profile, to stop texts.
+          </p>
+        </section>
+
+        <section className="space-y-3" aria-labelledby="sms-trusted-contacts-heading">
+          <h2 id="sms-trusted-contacts-heading" className="text-xl font-semibold text-gray-900">
+            Trusted contacts
+          </h2>
+          <p data-testid="sms-trusted-contact-policy">
+            You can name trusted contacts who hear about a reminder you still haven&rsquo;t
+            acknowledged. We never text a number someone else typed in. When you add a contact and
+            ask for texts, we give you a link to send them yourself. They open it, see who invited
+            them and what they will get, enter their own mobile number, and check this box. It is
+            never checked for them, and they get nothing until they do:
+          </p>
+          <figure
+            className="rounded border border-gray-300 bg-white p-4"
+            data-testid="sms-trusted-contact-wording"
+          >
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                disabled
+                className="mt-1"
+                aria-label="Example trusted contact opt-in box"
+              />
+              <span>{buildTrustedContactOptInLabel('[name]')}</span>
+            </label>
+            <figcaption className="mt-2 text-xs text-gray-500">
+              The opt-in box on the trusted contact&rsquo;s page, with the name of the person who
+              invited them.
+            </figcaption>
+          </figure>
+          <p>
+            Their consent covers that one person&rsquo;s reminders. We record when they checked the
+            box and the wording they saw, send one text to confirm, and stop when they reply STOP.
           </p>
         </section>
 

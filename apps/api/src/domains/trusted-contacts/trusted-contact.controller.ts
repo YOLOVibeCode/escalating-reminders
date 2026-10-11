@@ -1,4 +1,3 @@
-import type { TrustedContact } from '@er/types';
 import {
   Controller,
   Get,
@@ -14,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
-import { TrustedContactService } from './trusted-contact.service';
+import { TrustedContactService, type TrustedContactView } from './trusted-contact.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @ApiTags('trusted-contacts')
@@ -26,7 +25,7 @@ export class TrustedContactController {
 
   @Get()
   @ApiOperation({ summary: 'List trusted contacts' })
-  async list(@Request() req: { user: { sub: string } }): Promise<TrustedContact[]> {
+  async list(@Request() req: { user: { sub: string } }): Promise<TrustedContactView[]> {
     return this.trustedContactService.list(req.user.sub);
   }
 
@@ -43,7 +42,7 @@ export class TrustedContactController {
       relationship: string;
       notifyViaSms?: boolean;
     },
-  ): Promise<TrustedContact> {
+  ): Promise<TrustedContactView> {
     return this.trustedContactService.create(req.user.sub, body);
   }
 
@@ -60,7 +59,7 @@ export class TrustedContactController {
       relationship?: string;
       notifyViaSms?: boolean;
     },
-  ): Promise<TrustedContact> {
+  ): Promise<TrustedContactView> {
     return this.trustedContactService.update(req.user.sub, id, body);
   }
 

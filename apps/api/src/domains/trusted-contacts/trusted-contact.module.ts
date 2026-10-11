@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { TrustedContactOptInController } from './trusted-contact-optin.controller';
 import { TrustedContactController } from './trusted-contact.controller';
 import { TrustedContactRepository } from './trusted-contact.repository';
 import { TrustedContactService } from './trusted-contact.service';
@@ -9,7 +10,7 @@ import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [DatabaseModule, SmsModule, AuthModule],
-  controllers: [TrustedContactController],
+  controllers: [TrustedContactController, TrustedContactOptInController],
   providers: [TrustedContactRepository, TrustedContactService],
   exports: [TrustedContactService, TrustedContactRepository],
 })

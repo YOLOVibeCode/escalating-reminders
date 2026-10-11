@@ -76,6 +76,8 @@ model TrustedContact {
   phone                   String?
   relationship            String
   notificationPreferences Json     @default("{\"email\": true, \"sms\": false}") @map("notification_preferences")
+  /// Link token for /contact-optin/<token>. The contact opts in there; we never text them first.
+  smsOptInToken           String?  @unique @map("sms_opt_in_token")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 

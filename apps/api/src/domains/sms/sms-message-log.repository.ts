@@ -37,6 +37,18 @@ export class SmsMessageLogRepository {
     });
   }
 
+  /** Users who were sent the legacy "Reply YES" trusted-contact request at this phone. */
+  async findLegacyTrustedContactRequestUserIds(phone: string, requestType: string): Promise<string[]> {
+    const rows = await this.prisma.smsMessageLog.findMany({
+      where: { phone, direction: 'OUTBOUND', metadata: { path: ['type'], equals: requestType } },
+      select: { metadata: true },
+    });
+    const ids = rows
+      .map((row) => (row.metadata as { userId?: unknown }).userId)
+      .filter((id): id is string => typeof id === 'string' && id !== '');
+    return [...new Set(ids)];
+  }
+
   async updateByMessageSid(
     messageSid: string,
     data: { messageStatus?: string; errorCode?: string },
