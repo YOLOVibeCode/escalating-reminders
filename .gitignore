@@ -55,3 +55,6 @@ apps/api/prisma/migrations/*.sql
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Claude Code worktrees
+.claude/worktrees/
