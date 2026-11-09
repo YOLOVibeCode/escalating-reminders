@@ -123,6 +123,7 @@ escalating-reminders/
 - ✅ Calendar integration
 - ✅ Social escalation (trusted contacts)
 - ✅ Agent SDK (open source)
+- ✅ In-app Feedback button on every page (Noctusoft feedback widget, no setup)
 
 ---
 

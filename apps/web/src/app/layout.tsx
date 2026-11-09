@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { FeedbackWidget } from '@/components/feedback-widget';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { EnvChrome } from '@/lib/env-chrome/EnvChrome';
 import { badgeFor } from '@/lib/env-chrome/chrome';
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <EnvChrome env={env} />
         <QueryProvider>{children}</QueryProvider>
+        <FeedbackWidget />
       </body>
     </html>
   );
